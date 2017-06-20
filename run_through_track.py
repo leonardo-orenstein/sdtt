@@ -6,6 +6,7 @@ Created on Fri Jun  9 16:20:37 2017
 """
 from Vehicle import Vehicle
 from SimulationVehicle import BikeTrailer
+from vpython import *
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,17 +28,20 @@ for i in range(1,N):
 
 # Create plots to show the animation (top) and position on track (bottom)
 fig = plt.figure(figsize=(6, 8))
-ax = fig.add_subplot(2, 1, 1)
+ax = fig.add_subplot(3, 1, 1)
 axes = [ax]
 
 # The bottom independent axes
-axes.append(fig.add_subplot(2, 1, 2))
+axes.append(fig.add_subplot(3, 1, 2))
+axes.append(fig.add_subplot(3, 1, 3))
 
 ax =  axes[0]
-ax2 = axes[1]
+ax2 = axes[2]
+ax3 = axes[1]
 
 ax.scatter(x, y,c=speedLimit, marker='*', s=4)
 ax2.scatter(x,y,c=speedLimit, marker='*', s=4)
+ax3.scatter(x,y,c=speedLimit, marker='*', s=4)
 
 plt.show()
 
@@ -50,7 +54,7 @@ truck.tractor.phi = 0
 truck.plotRefreshRate = .1
 
 # Create the top layer of the autonomous vehicle
-sdv  = Vehicle()
+sdv  = Vehicle(length = 4, fig = fig, ax = ax3)
 
 # Initializes the controller
 sdv.pilot.initPhiPIDController(K_p = 8, K_i = 0.0, K_d = 0)
@@ -58,15 +62,14 @@ sdv.pilot.initPhiPIDController(K_p = 8, K_i = 0.0, K_d = 0)
 # Set the track to follow. We are tracking a gps reference here
 sdv.planner.setTrack(x, y, angles, speedLimit)
 
-# set the vehicle length
-sdv.length = 4
-
 # connect the autonomous vehcile system to the 'physical' system
 sdv.connectToSimulation(truck.tractor)
 
 # Total time of the simulation
 totalTime = 10
 t = 0
+
+body3d = box(pos=vector(0,0,0), axis=vector(0, 0, 0), length=length, height=2, width=2)
 
 # simulation loop
 while t < totalTime:
@@ -83,6 +86,11 @@ while t < totalTime:
     if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):   
 #        print(phi)
         truck.plot()
+        sdv.plot()
+        x,y = sdv.gps.read()
+        orientation = sdv.compass.read()
+        body3d.pos  = vector(x,y,0)
+        body3d.axis = vector(cos(orientation), sin(orientation), 0)
         ax2.plot(truck.tractor.x, truck.tractor.y,'k*')
         truck.timeOfLastPlot = t
 

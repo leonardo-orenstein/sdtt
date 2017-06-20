@@ -9,12 +9,13 @@ from Actuator import Actuator
 from Sensor import Sensor
 from Pilot import Pilot
 from Planner import Planner
+from Vizualizer import Vizualizer
 
 class Vehicle(object):
     '''
     The overal Vehicle class pull together all other components
     '''
-    def __init__(self):
+    def __init__(self, length, fig, ax):
         self.engine = Actuator()
         self.steering = Actuator()
         
@@ -26,7 +27,8 @@ class Vehicle(object):
         self.pilot = Pilot()
         self.planner = Planner()
         
-        self.length = 0
+        self.vizualizer = Vizualizer(length, fig, ax)  
+        self.length = length
         
     def calculateAdvancedTracker(self, dt):
         x, y        = self.gps.read()
@@ -78,3 +80,14 @@ class Vehicle(object):
         self.compass.scan()
         self.gps.scan()
         self.wheelAngle.scan()
+        
+    def plot(self):
+        x, y        = self.gps.read()
+        orientation = self.compass.read()
+        self.vizualizer.plot(x, y, orientation, self.length)
+        
+        
+    def plot3d(self):
+        x, y        = self.gps.read()
+        orientation = self.compass.read()
+        self.vizualizer.plot3d(x, y, orientation)

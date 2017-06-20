@@ -168,33 +168,6 @@ class BikeTrailer(object):
         self.ax.set_xlabel('Distance X')
         self.ax.set_ylabel('Distance Y')
         
-    def calculateTracker(self, dt):
-        return self.driver.calculateTracker(self.tractor.x, self.tractor.y, self.tractor.orientation, 
-                                               self.tractor.cruiseControl.phi, dt)  
-
-    def calculateAdvancedTracker(self, dt):
-        return self.driver.calculateAdvancedTracker(self.tractor.x, self.tractor.y, self.tractor.orientation, 
-                                               self.tractor.cruiseControl.phi, self.tractor.length, 
-                                               self.tractor.cruiseControl.v, dt)  
-
-        
-    def cteLoop(self, dt):
-        return self.driver.cteLoop(self.tractor.x, self.tractor.y, dt)  
-     
-    def backsteppingControl(self, dt):
-        return self.driver.backsteppingControl(self.tractor.x, self.tractor.y, self.tractor.orientation, 
-                                               self.tractor.cruiseControl.phi, self.tractor.length, dt)
-    
-    def centripetalLoop(self, max_lat_accel):
-        acc_cent    = self.tractor.acc_cent
-        v_1         = self.tractor.cruiseControl.v
-        phi_1       = self.tractor.cruiseControl.phi
-        l_1         = self.tractor.length
-        omega       = self.tractor.cruiseControl.omega
-        dV          = self.tractor.cruiseControl.acc
-        
-        return self.driver.centripetalLoop(acc_cent, max_lat_accel, l_1, phi_1, v_1, dV, omega)
-    
     def update_posture(self, X):
         l_1   = self.tractor.length
         l_off = self.tractor.tailDistance
@@ -225,39 +198,6 @@ class BikeTrailer(object):
         self.update_posture(X[-1])
                 
         return X
-    
-    def print(self):
-        print('Tractor pose')
-        self.tractor.print()
-        
-        print('Trailer pose')
-        self.trailer.print()
-        
-        print('Velocity')
-        print(self.tractor.cruiseControl.v)
-        
-        print('angle')
-        print(self.tractor.cruiseControl.phi)
-        
-    def plot(self):
-        self.tractorFront.set_ydata(self.tractor.y)
-        self.tractorFront.set_xdata(self.tractor.x)
-        self.tractorLine.set_ydata([self.tractor.y, self.trailer.y])
-        self.tractorLine.set_xdata([self.tractor.x, self.trailer.x])
-
-        self.trailerFront.set_ydata(self.trailer.y)
-        self.trailerFront.set_xdata(self.trailer.x)
-        
-        x_4 = self.trailer.x - (self.trailer.length + self.trailer.tailDistance)*cos(self.trailer.orientation)
-        y_4 = self.trailer.y - (self.trailer.length + self.trailer.tailDistance)*sin(self.trailer.orientation)
-        self.trailerLine.set_ydata([y_4, self.trailer.y])
-        self.trailerLine.set_xdata([x_4, self.trailer.x])
-        
-        self.ax.set_xlim([self.trailer.x - 50, self.trailer.x + 50])
-        self.ax.set_ylim([self.trailer.y - 50, self.trailer.y + 50])
-        
-        self.fig.canvas.draw()
-        plt.pause(0.01)    
             
     def diff(self, X, t):
         delta_1 = X[2]
@@ -301,3 +241,39 @@ class BikeTrailer(object):
             self.timeOfLastPlot = t
             
         return [dX_1, dY_1, dDelta_1, dDelta_2]      
+    
+    def print(self):
+        print('Tractor pose')
+        self.tractor.print()
+        
+        print('Trailer pose')
+        self.trailer.print()
+        
+        print('Velocity')
+        print(self.tractor.cruiseControl.v)
+        
+        print('angle')
+        print(self.tractor.cruiseControl.phi)
+        
+    def plot(self, draw = True):
+        self.tractorFront.set_ydata(self.tractor.y)
+        self.tractorFront.set_xdata(self.tractor.x)
+        self.tractorLine.set_ydata([self.tractor.y, self.trailer.y])
+        self.tractorLine.set_xdata([self.tractor.x, self.trailer.x])
+
+        self.trailerFront.set_ydata(self.trailer.y)
+        self.trailerFront.set_xdata(self.trailer.x)
+        
+        x_4 = self.trailer.x - (self.trailer.length + self.trailer.tailDistance)*cos(self.trailer.orientation)
+        y_4 = self.trailer.y - (self.trailer.length + self.trailer.tailDistance)*sin(self.trailer.orientation)
+        self.trailerLine.set_ydata([y_4, self.trailer.y])
+        self.trailerLine.set_xdata([x_4, self.trailer.x])
+        
+        self.ax.set_xlim([self.trailer.x - 50, self.trailer.x + 50])
+        self.ax.set_ylim([self.trailer.y - 50, self.trailer.y + 50])
+        
+
+        if(draw):
+            self.fig.canvas.draw()
+            plt.pause(0.01)    
+        
