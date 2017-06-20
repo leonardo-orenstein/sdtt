@@ -15,6 +15,7 @@ ToDo:
 - Add MPC
 - Add Kinematic model
 - Add more complex tracks
+  > Track class with pre built components?
 - Add vision component (Sensor?)
 - Add CNN controller (future work)
 - HW
