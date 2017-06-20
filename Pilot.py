@@ -166,8 +166,6 @@ class Pilot(object):
         if(self.error_phi > pi):
             self.error_phi -= 2*pi
         
-        self.iError_phi += self.error_phi*delta_t
-        
 #        omega = sin(phi)/length
 #        dE_1 = v_d*cos(delta_o) + omega*delta_y - v*cos(phi)
 #        dE_2 = v_d*sin(delta_o) - omega*delta_x

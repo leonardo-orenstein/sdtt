@@ -99,7 +99,7 @@ class Planner(object):
     
     def updateGoal(self, x, y, v, dt, adaptativeUpdate = True):
         if(adaptativeUpdate == True):
-            pathUpdateDistance = v*dt*self.pathUpdateLookAhead
+            pathUpdateDistance = abs(v*dt*self.pathUpdateLookAhead)
         else:
             pathUpdateDistance = self.pathUpdateDistance
             
@@ -108,6 +108,7 @@ class Planner(object):
         self.nextX = (self.x_track[lIdx] + self.x_track[self.currGoal] + self.x_track[rIdx])/3
         self.nextY = (self.y_track[lIdx] + self.y_track[self.currGoal] + self.y_track[rIdx])/3
         self.nextAngle = (self.angle_track[lIdx] + self.angle_track[self.currGoal] + self.angle_track[rIdx])/3
+        self.nextV = self.v_track[self.currGoal]
 
         distance = sqrt((self.nextX - x)**2 + (self.nextY - y)**2)
         if(distance < pathUpdateDistance):

@@ -7,7 +7,7 @@ Created on Sun Jun 18 20:26:28 2017
 from math import sin, cos, tan, pi
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
-
+import numpy as np
 
 class SimulationVehicle(object):
     '''
@@ -23,6 +23,11 @@ class SimulationVehicle(object):
         
         self.v   = v
         self.phi = phi
+        
+        self.errorPos = 1 # in meters
+        self.errorPhi = 2*pi/180 # in radias
+        self.errorOrientation = 5*pi/180 # in radians
+        self.errorVelocity = 5 # in percents
         
         self.lastUpdate = 0
         
@@ -44,16 +49,16 @@ class SimulationVehicle(object):
         self.lastUpdate = 0
         
     def getPosition(self):
-        return self.x, self.y
+        return np.random.normal(self.x, self.errorPos,1), np.random.normal(self.y, self.errorPos,1)
     
     def getSteering(self):
-        return self.phi
+        return np.random.normal(self.phi, self.errorPhi,1)
     
     def getOrientation(self):
-        return self.orientation
+        return np.random.normal(self.orientation, self.errorOrientation,1)
         
     def getVelocity(self):
-        return self.v
+        return self.v*(1 + np.random.normal(0, self.errorVelocity,1))
        
 class Bike(SimulationVehicle):
     def __init__(self, 
