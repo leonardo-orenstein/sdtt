@@ -26,7 +26,8 @@ class Planner(object):
         self.nextAngle = None
         self.nextV = None
         
-        self.pathUpdateDistance = 10
+        self.pathUpdateLookAhead = 10
+        self.pathUpdateLookDistance = 10
         self.headingWindow = 0
                 
         self.lastUpdate = 0
@@ -96,7 +97,12 @@ class Planner(object):
         self.currGoal = idx
         return idx
     
-    def updateGoal(self, x, y):
+    def updateGoal(self, x, y, v, dt, adaptativeUpdate = True):
+        if(adaptativeUpdate == True):
+            pathUpdateDistance = v*dt*self.pathUpdateLookAhead
+        else:
+            pathUpdateDistance = self.pathUpdateDistance
+            
         lIdx = max(self.currGoal - self.headingWindow , 0)
         rIdx = min(self.currGoal + self.headingWindow , self.trackLen - 1)
         self.nextX = (self.x_track[lIdx] + self.x_track[self.currGoal] + self.x_track[rIdx])/3
@@ -104,9 +110,11 @@ class Planner(object):
         self.nextAngle = (self.angle_track[lIdx] + self.angle_track[self.currGoal] + self.angle_track[rIdx])/3
 
         distance = sqrt((self.nextX - x)**2 + (self.nextY - y)**2)
-        if(distance < self.pathUpdateDistance):
+        if(distance < pathUpdateDistance):
             self.currGoal = min(self.currGoal + 1, self.trackLen - 1)
-
+        else:
+            return [self.nextX, self.nextY, self.nextAngle, self.nextV]
+        
         lIdx = max(self.currGoal - 1, 0)
         rIdx = min(self.currGoal + 1, self.trackLen - 1)
         self.nextX = (self.x_track[lIdx] + self.x_track[self.currGoal] + self.x_track[rIdx])/3
@@ -116,6 +124,6 @@ class Planner(object):
                         
         return [self.nextX, self.nextY, self.nextAngle, self.nextV]
         
-    def getGoal(self, x, y):
-        self.updateGoal(x, y)
+    def getGoal(self, x, y, v, dt):
+        self.updateGoal(x, y, v, dt)
         return [self.nextX, self.nextY, self.nextAngle, self.nextV]    

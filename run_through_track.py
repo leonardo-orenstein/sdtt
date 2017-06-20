@@ -6,7 +6,7 @@ Created on Fri Jun  9 16:20:37 2017
 """
 from Vehicle import Vehicle
 from SimulationVehicle import BikeTrailer
-from vpython import *
+#from vpython import *
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,8 +17,11 @@ from math import cos, sin
 # Create Track
 N = 600
 dt = 0.01
-speedLimit = [20 for i in range(0,N)]
+speedLimit = [i/20 if i > N/2 else 5 + (N/2)/20 - i/20 for i in range(0,N)]
+#speedLimit = [20 for i in range(0,N)]
+
 angles = [-math.pi/4 if i < N/2 - 1 else math.pi/4  for i in range(0,N)]
+
 x = [0]
 y = [0]
 for i in range(1,N):
@@ -57,7 +60,7 @@ truck.plotRefreshRate = .1
 sdv  = Vehicle(length = 4, fig = fig, ax = ax3)
 
 # Initializes the controller
-sdv.pilot.initPhiPIDController(K_p = 8, K_i = 0.0, K_d = 0)
+sdv.pilot.initPhiPIDController(K_p = 8, K_i = 0.4, K_d = 1)
 
 # Set the track to follow. We are tracking a gps reference here
 sdv.planner.setTrack(x, y, angles, speedLimit)
@@ -66,18 +69,21 @@ sdv.planner.setTrack(x, y, angles, speedLimit)
 sdv.connectToSimulation(truck.tractor)
 
 # Total time of the simulation
-totalTime = 10
+totalTime = 6
 t = 0
 
-body3d = box(pos=vector(0,0,0), axis=vector(0, 0, 0), length=length, height=2, width=2)
+#body3d = box(pos=vector(0,0,0), axis=vector(0, 0, 0), length=length, height=2, width=2)
 
 # simulation loop
 while t < totalTime:
     
     sdv.scan()
     
-    omega = sdv.calculateAdvancedTracker(dt)
-    acc = sdv.velocityLoop(speedLimit[0], 0.1)
+    omega = sdv.headingTracker(dt)
+#    omega = sdv.phiController(dt)
+#    omega = sdv.cteController(dt)
+
+    acc = sdv.velocityController(dt)
     
     sdv.engine.setValue(acc)
     sdv.steering.setValue(omega)
@@ -89,8 +95,8 @@ while t < totalTime:
         sdv.plot()
         x,y = sdv.gps.read()
         orientation = sdv.compass.read()
-        body3d.pos  = vector(x,y,0)
-        body3d.axis = vector(cos(orientation), sin(orientation), 0)
+#        body3d.pos  = vector(x,y,0)
+#        body3d.axis = vector(cos(orientation), sin(orientation), 0)
         ax2.plot(truck.tractor.x, truck.tractor.y,'k*')
         truck.timeOfLastPlot = t
 

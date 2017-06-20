@@ -95,7 +95,14 @@ class Pilot(object):
             self.error_phi -= 2*pi
         self.iError_phi += self.error_phi*delta_t/2
 
-        
+    def velocityController(self, v, v_ref, acc, histeresis = 0.1):
+        if(abs(v - v_ref) <= histeresis):
+            return 0
+        elif(v < v_ref):
+            return acc
+        elif(v > v_ref):
+            return -acc
+                
     def phiController(self, x, y, orientation, phi, 
                             x_road, y_road, angle_road,
                             delta_t):
@@ -116,9 +123,10 @@ class Pilot(object):
             heading -= 2*pi                        
 
         heading -= orientation
+        self.error_phi = (heading  - phi) % (2*pi)
         
-
-        
+        if(self.error_phi > pi):
+            self.error_phi -= 2*pi
         self.iError_phi += self.error_phi*delta_t
         u = self.error_phi*self.K_p_phi + self.iError_phi*self.K_i_phi
 
@@ -128,8 +136,6 @@ class Pilot(object):
                            phi, v, length,  
                            x_road, y_road, angle_road, v_d,
                            delta_t):
-
-        
         eps = 0.1
 
         delta_x = (x_road - x) 
@@ -210,6 +216,27 @@ class Pilot(object):
         
         return u
     
+    # A tentative of a controller which considers the centripetal acceleration. 
+    # I didn't like the results, but that might be because the acc is accentuated
+    # since there is no drift
+    def centripetalLoop(self, acc_cent, max_lat_accel, l_1, phi_1, v_1, dV, omega):
+        max_v_dyn = sqrt(max_lat_accel*l_1/sin(phi_1))
+#        dAcc_cet = abs(2*v_1*dV*cos(phi_1)*omega/l_1)
+#        derivative_factor = .2
+##        print(omega)
+#        if(omega > 0):
+#            omega -= derivative_factor*dAcc_cet
+#            omega = max(0, omega)
+#        else:
+#            omega += derivative_factor*dAcc_cet
+#            omega = min(0, omega)
+##        print(omega)
+#        
+##        print()
+        return max_v_dyn
+    
+    ## From here on are just testing with a backstepping controler, but I couldn't
+    ## get it to work -LO
     def backsteppingControl_unicyle(self, x, y, theta, dt):
         '''
         REf: Tracking Control of Mobile Robots: A Case Study in backstepping.
@@ -303,15 +330,6 @@ class Pilot(object):
         u_omega = asin((omega_r  - u_2)*length)
                    
         return u_v, u_omega
-
-    def velocityLoop(self, v, v_ref, acc, histeresis = 0.1):
-        if(abs(v - v_ref) <= histeresis):
-            return 0
-        elif(v < v_ref):
-            return acc
-        elif(v > v_ref):
-            return -acc
-        
         
     def psi(self, z):
         sigma = pi/6
@@ -325,18 +343,3 @@ class Pilot(object):
         returnArray = integrate.odeint(diffNu, [0], [0,1], args = (psi_yevr, theta))
         return returnArray[-1]
         
-    def centripetalLoop(self, acc_cent, max_lat_accel, l_1, phi_1, v_1, dV, omega):
-        max_v_dyn = sqrt(max_lat_accel*l_1/sin(phi_1))
-#        dAcc_cet = abs(2*v_1*dV*cos(phi_1)*omega/l_1)
-#        derivative_factor = .2
-##        print(omega)
-#        if(omega > 0):
-#            omega -= derivative_factor*dAcc_cet
-#            omega = max(0, omega)
-#        else:
-#            omega += derivative_factor*dAcc_cet
-#            omega = min(0, omega)
-##        print(omega)
-#        
-##        print()
-        return max_v_dyn

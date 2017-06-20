@@ -30,21 +30,41 @@ class Vehicle(object):
         self.vizualizer = Vizualizer(length, fig, ax)  
         self.length = length
         
-    def calculateAdvancedTracker(self, dt):
+        self.maxLonAcc = 10
+        
+    def headingTracker(self, dt):
         x, y        = self.gps.read()
         orientation = self.compass.read()
         phi         = self.wheelAngle.read()
         v           = self.speedometer.read()
-        x_road, y_road, angle_road, v_d = self.planner.getGoal(x, y)
+        x_road, y_road, angle_road, v_d = self.planner.getGoal(x, y, v, dt)
 
         return self.pilot.headingTracker(x, y, orientation, 
                                            phi, v, self.length,
                                            x_road, y_road, angle_road, v_d,
                                            dt)  
 
-    def velocityLoop(self, v_ref, acc):
+    def phiController(self, dt):
+        x, y        = self.gps.read()
+        orientation = self.compass.read()
+        phi         = self.wheelAngle.read()
         v           = self.speedometer.read()
-        return self.pilot.velocityLoop(v, v_ref, acc, histeresis = 0.1)
+        x_road, y_road, angle_road, v_d = self.planner.getGoal(x, y, v, dt)
+
+        return self.pilot.phiController(x, y, orientation, phi,
+                                        x_road, y_road, angle_road,
+                                       dt)  
+
+    def cteController(self, dt):
+        x, y        = self.gps.read()    
+        return self.pilot.crossTrackErrorController(x, y, self.planner, dt)
+    
+    def velocityController(self, dt):
+        x, y        = self.gps.read()
+        v               = self.speedometer.read()
+        _, _, _, v_ref  = self.planner.getGoal(x, y, v, dt)
+
+        return self.pilot.velocityController(v, v_ref, self.maxLonAcc, histeresis = 0.1)
 
 
     def connectToEngine(self, function):
