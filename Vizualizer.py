@@ -50,7 +50,7 @@ class Vizualizer(object):
         
         if(draw):
             self.fig.canvas.draw()
-            plt.pause(0.01)    
+#            plt.pause(0.001)    
             
     def plot3d(self, x, y, orientation):
         self.body3d.pos  = vector(x,y,0)
@@ -106,7 +106,8 @@ class VizualizerBikeTrailer(object):
         self.ax.set_xlim([trailer_x - 50, trailer_x + 50])
         self.ax.set_ylim([trailer_y - 50, trailer_y + 50])
         
-        #self.fig.canvas.draw()
-        #plt.pause(0.01)    
+        if(draw):
+            self.fig.canvas.draw()
+#            plt.pause(0.001)   
         
             

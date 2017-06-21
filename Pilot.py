@@ -158,7 +158,8 @@ class Pilot(object):
             heading -= 2*pi                        
 
         heading -= orientation
-        dHeading = (heading - self.heading)/delta_t
+        dPhi_d = (heading - self.heading)/delta_t
+        
         self.heading = heading
         
         self.error_phi = (heading  - phi) % (2*pi)
@@ -166,11 +167,13 @@ class Pilot(object):
         if(self.error_phi > pi):
             self.error_phi -= 2*pi
         
-#        omega = sin(phi)/length
-#        dE_1 = v_d*cos(delta_o) + omega*delta_y - v*cos(phi)
-#        dE_2 = v_d*sin(delta_o) - omega*delta_x
-#        dPhi_d = (delta_x*dE_2 - delta_y*dE_1)/(delta_x**2 + delta_y**2) - omega
-
+        omega = v*sin(phi)/length
+        dE_1 = v_d*cos(delta_o) + omega*delta_y - v*cos(phi)
+        dE_2 = v_d*sin(delta_o) - omega*delta_x
+        dHeading = (delta_x*dE_2 - delta_y*dE_1)/(delta_x**2 + delta_y**2) - omega
+#        print(dPhi_d)
+#        print(dHeading)
+#        print()
         u = self.error_phi*self.K_p_phi + dHeading
             
         return u
@@ -284,7 +287,7 @@ class Pilot(object):
         elif(u_omega > 0):
             u_omega = min(1, u_omega)
 #            
-        print(u_omega)            
+#        print(u_omega)            
         return u_v, u_omega
 
 

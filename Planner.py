@@ -27,7 +27,7 @@ class Planner(object):
         self.nextV = None
         
         self.pathUpdateLookAhead = 10
-        self.pathUpdateLookDistance = 10
+        self.pathUpdateDistance = 4
         self.headingWindow = 0
                 
         self.lastUpdate = 0
@@ -72,8 +72,9 @@ class Planner(object):
         self.trackLen = len(v_ref)
         
     def smooth(self, path, weight_data = 0.5, weight_smooth = 0.2, tolerance = 0.000001):
-        ''' Using the code for smooth function from the course the artificial inteligence 
-            for robotics class
+        '''
+        Using the code for smooth function from the course the artificial inteligence 
+        for robotics class
         '''
         newpath = list(path)
         totalChange = tolerance
@@ -97,7 +98,7 @@ class Planner(object):
         self.currGoal = idx
         return idx
     
-    def updateGoal(self, x, y, v, dt, adaptativeUpdate = True):
+    def updateGoal(self, x, y, v, dt, adaptativeUpdate = False):
         if(adaptativeUpdate == True):
             pathUpdateDistance = abs(v*dt*self.pathUpdateLookAhead)
         else:
@@ -112,7 +113,10 @@ class Planner(object):
 
         distance = sqrt((self.nextX - x)**2 + (self.nextY - y)**2)
         if(distance < pathUpdateDistance):
+            distance = (self.x_track - x)**2 + (self.y_track - y)**2
+            idx = distance.argmin()
             self.currGoal = min(self.currGoal + 1, self.trackLen - 1)
+            self.currGoal = max(self.currGoal, idx)
         else:
             return [self.nextX, self.nextY, self.nextAngle, self.nextV]
         

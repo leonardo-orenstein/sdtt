@@ -13,10 +13,14 @@ class Actuator(object):
     
     def __init__(self):
         self.system = None #Link with the physical system
+        self.value  = 0
         
     def connect(self, system):
         self.system = system #This is the connection with the the physical system. Should be a driver or something alike
         
     def setValue(self, value):
+        self.value = value
         self.system(value)
         
+    def getValue(self):
+        return self.value

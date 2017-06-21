@@ -10,6 +10,8 @@ from Sensor import Sensor
 from Pilot import Pilot
 from Planner import Planner
 from Vizualizer import Vizualizer
+from ParticleFilter import ParticleFilter
+from SimulationVehicle import Bike
 
 class Vehicle(object):
     '''
@@ -31,12 +33,14 @@ class Vehicle(object):
         self.length = length
         
         self.maxLonAcc = 10
+        self.particleFilter = None
         
     def headingTracker(self, dt):
         '''
         Wrapper for the heading controller
         '''
-        x, y        = self.gps.read()
+#        x, y        = self.gps.read()
+        x, y        = self.particleFilter.getPosition()
         orientation = self.compass.read()
         phi         = self.wheelAngle.read()
         v           = self.speedometer.read()
@@ -51,7 +55,8 @@ class Vehicle(object):
         '''
         Wrapper for the phi controller
         '''
-        x, y        = self.gps.read()
+#        x, y        = self.gps.read()
+        x, y        = self.particleFilter.getPosition()        
         orientation = self.compass.read()
         phi         = self.wheelAngle.read()
         v           = self.speedometer.read()
@@ -65,7 +70,8 @@ class Vehicle(object):
         '''
         Wrapper for the Cross Track Error controller
         '''
-        x, y        = self.gps.read()    
+#        x, y        = self.gps.read()    
+        x, y        = self.particleFilter.getPosition()
         return self.pilot.crossTrackErrorController(x, y, self.planner, dt)
     
     def velocityController(self, dt):
@@ -73,6 +79,7 @@ class Vehicle(object):
         Wrapper for the velocity controller
         '''
         x, y        = self.gps.read()
+        x, y        = self.particleFilter.getPosition()
         v               = self.speedometer.read()
         _, _, _, v_ref  = self.planner.getGoal(x, y, v, dt)
 
@@ -136,6 +143,26 @@ class Vehicle(object):
         self.compass.scan()
         self.gps.scan()
         self.wheelAngle.scan()
+    
+    def createFilter(self):
+        xHat, yHat      = self.gps.read()
+        orientationHat  = self.compass.read()
+        phiHat          = self.wheelAngle.read()
+        vHat            = self.speedometer.read()
+        self.particleFilter = ParticleFilter(Bike, xHat, yHat, orientationHat, phiHat, vHat, self.length)
+        
+    def updateFilter(self, dt):
+        xHat, yHat      = self.gps.read()
+        orientationHat  = self.compass.read()
+        phiHat          = self.wheelAngle.read()
+        vHat            = self.speedometer.read()
+        acc             = self.engine.getValue()
+        omega           = self.steering.getValue()
+        
+#        measurements = [ xHat, yHat, orientationHat, phiHat, vHat]
+        measurements = [ xHat, yHat]
+        self.particleFilter.addData(acc, omega, dt, measurements)
+
         
     def plot(self):
         '''

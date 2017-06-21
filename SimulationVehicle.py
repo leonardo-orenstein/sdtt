@@ -4,7 +4,7 @@ Created on Sun Jun 18 20:26:28 2017
 
 @author: leo
 """
-from math import sin, cos, tan, pi
+from math import sin, cos, tan, pi, exp, sqrt
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import numpy as np
@@ -13,23 +13,24 @@ class SimulationVehicle(object):
     '''
     The simulation class has the dynamics of the vehicle for simulation
     '''
-    def __init__(self, theta_0 = 0, x_0 = 0, y_0 = 0,  acc = 1, dPhi = 1*pi/180, v = 0, phi = 0):
-        self.orientation = theta_0
+    def __init__(self, theta_0 = 0, x_0 = 0, y_0 = 0,  acc = 1, v = 0):
         self.x = x_0
         self.y = y_0
+        self.orientation = theta_0
+        self.v   = v
         
         self.acc = acc
-        self.omega = dPhi
         
-        self.v   = v
-        self.phi = phi
-        
-        self.errorPos = 1 # in meters
-        self.errorPhi = 2*pi/180 # in radias
-        self.errorOrientation = 5*pi/180 # in radians
-        self.errorVelocity = 5 # in percents
+        self.errorPos = 0 # in meters
+        self.errorOrientation = 0 # in radians
+        self.errorVelocity = 0 # in percents
         
         self.lastUpdate = 0
+        
+    def setNoise(self, errorPos, errorOrientation, errorVelocity):
+        self.errorPos = errorPos  # in meters
+        self.errorOrientation = errorOrientation # in radians
+        self.errorVelocity = errorVelocity # in percents
         
     def setAcceleration(self, acc):
         self.acc = acc
@@ -51,44 +52,86 @@ class SimulationVehicle(object):
     def getPosition(self):
         return np.random.normal(self.x, self.errorPos,1), np.random.normal(self.y, self.errorPos,1)
     
-    def getSteering(self):
-        return np.random.normal(self.phi, self.errorPhi,1)
-    
     def getOrientation(self):
         return np.random.normal(self.orientation, self.errorOrientation,1)
         
     def getVelocity(self):
-        return self.v*(1 + np.random.normal(0, self.errorVelocity,1))
+        return self.v*(1 + np.random.normal(0, self.errorVelocity,1)/100)
        
 class Bike(SimulationVehicle):
     def __init__(self, 
                  theta_0 = 0, x_0 = 0, y_0 = 0,
                  acc = 1, dPhi = 1*pi/180, v = 0, phi = 0,
                  length = 2, tailDistance = 0.5):
-        SimulationVehicle.__init__(self, theta_0, x_0, y_0, acc, dPhi, v, phi)
+        SimulationVehicle.__init__(self, theta_0, x_0, y_0, acc, v)
         
         self.length = length # length of robot
         self.CoM = length/2 
         self.acc_cent = 0
         self.radius = 0        
+        self.phi = phi
+        self.omega = dPhi
+
+        self.errorPhi = 0 # in radians
         
         self.tailDistance = tailDistance
         
+    def duplicate(self):
+        newBike= Bike(self.orientation, self.x, self.y, 
+                    self.acc, self.omega, self.v, self.phi, 
+                    self.length, self.tailDistance)
+        newBike.lastUpdate = self.lastUpdate
+        newBike.setNoise(self.errorPos, self.errorPhi, self.errorOrientation, self.errorVelocity)
+        return newBike
+
+
+    def setNoise(self, errorPos, errorPhi, errorOrientation, errorVelocity):
+        self.errorPos = errorPos  # in meters
+        self.errorPhi = errorPhi # in radians
+        self.errorOrientation = errorOrientation # in radians
+        self.errorVelocity = errorVelocity # in percents
+        
+    def getSteering(self):
+        return np.random.normal(self.phi, self.errorPhi,1)
+            
     def set_pose(self, orientation, x, y):
         orientation = orientation % (2*pi)
             
         if(orientation > pi):    
             orientation-= 2*pi
             
-        self.orientation = orientation
         self.x = x
         self.y = y
+        self.orientation = orientation
         
-    def move(self, motion): 
+    def getStates(self):
+        return [self.x, self.y, self.orientation, self.phi, self.v]
 
-        steering = motion[0]
-        distance = motion[1]
+    def updateStates(self, dt):
+        self.v   += self.acc*dt
+        self.phi += self.omega*dt
         
+    def measurementProb(self, measurements):
+
+        # calculate the correct measurement
+        predictedMeasurements = self.getStates() # Our sense function took 0 as an argument to switch off noise.
+        V = [self.errorPos, self.errorPos, self.errorOrientation, self.errorPhi, self.errorVelocity*predictedMeasurements[4]]
+        # compute errors
+        error = 1.0
+        for i in range(len(measurements)):
+            error_bearing = abs(measurements[i] - predictedMeasurements[i])
+#            error_bearing = (error_bearing + pi) % (2.0 * pi) - pi # truncate
+            
+            # update Gaussian
+            error *= (exp(- (error_bearing ** 2) / (V[i] ** 2) / 2.0) /  
+                      sqrt(2.0 * pi * (V[i] ** 2)))
+
+        return error
+
+    def move(self, dt): 
+
+        distance = self.v*dt
+        steering = self.phi
         #forward = random.gauss(forward, self.distance_noise)
         #steering= random.gauss(steering, self.steering_noise)
         
@@ -116,11 +159,49 @@ class Bike(SimulationVehicle):
         x = self.x + dx
         y = self.y + dy
         orientation = (self.orientation + beta) % (2*pi)
+        if(orientation > pi):    
+            orientation-= 2*pi
         
         self.set_pose(orientation, x, y)
         
         
         return ([dRotation, dTranslation], beta)
+    
+    
+#    def move(self, steering, distance): 
+#
+#        #forward = random.gauss(forward, self.distance_noise)
+#        #steering= random.gauss(steering, self.steering_noise)
+#        
+#        beta = distance/self.length*tan(steering)
+#        
+#        if(beta > 0.001):
+#            R = distance/beta
+#            
+#            dx = - sin(self.orientation)*R + sin(self.orientation + beta)*R
+#            dy = + cos(self.orientation)*R - cos(self.orientation + beta)*R
+#        
+#            dRotation = [ self.CoM*(cos(self.orientation + beta) - cos(self.orientation)),
+#                          self.CoM*(sin(self.orientation + beta) - sin(self.orientation))]
+#
+# 
+#            dTranslation = [dx - dRotation[0],
+#                            dy - dRotation[1]] 
+#        else:
+#            dx = cos(self.orientation)*distance
+#            dy = sin(self.orientation)*distance
+#            
+#            dRotation = [0,0]
+#            dTranslation = [dx, dy]
+#        
+#        x = self.x + dx
+#        y = self.y + dy
+#        orientation = (self.orientation + beta) % (2*pi)
+#        
+#        self.set_pose(orientation, x, y)
+#        
+#        
+#        return ([dRotation, dTranslation], beta)
     
     def print(self):
         print(self.x)
@@ -150,6 +231,10 @@ class BikeTrailer(object):
         self.trailerFront = None
         self.tractorLine = None
         self.trailerLine = None
+    
+    def setNoise(self, errorPos, errorPhi, errorOrientation, errorVelocity):
+        self.tractor.setNoise(errorPos, errorPhi, errorOrientation, errorVelocity)
+        self.trailer.setNoise(errorPos, errorPhi, errorOrientation, errorVelocity)
         
     def createPlot(self, fig = None, ax = None):
         self.timeOfLastPlot = -1
@@ -208,8 +293,9 @@ class BikeTrailer(object):
         delta_1 = X[2]
         delta_2 = X[3]
         self.update_posture(X)
-
-        self.tractor.updateStates(t)
+        dt = t - self.tractor.lastUpdate
+        self.tractor.updateStates(dt)
+        self.tractor.lastUpdate = t
         
         phi_1 = self.tractor.phi
         v_1 = self.tractor.v

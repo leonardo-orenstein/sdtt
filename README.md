@@ -11,7 +11,10 @@ Any help is welcomed! From ideas to coding just drop me a message!
 
 ToDo:
 - Add uncertanty in Sensor
-- Add error/slack in Actuator
+	> Done (06/20)
+- Add uncertanty/slack/quantization in Actuator
+- Add SLAM
+- Improve plots
 - Add MPC
 - Add Kinematic model
 - Add more complex tracks
