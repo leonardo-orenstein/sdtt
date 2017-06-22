@@ -16,7 +16,7 @@ Any help is welcomed! From ideas to coding just drop me a message!
 ToDo:
 - Add uncertanty in Sensor
 	> Done (06/20)
-- Improve performance of the Particle Filter
+- Improve performance of the Particle Filter/Simulation/Animation
 - Add uncertanty/slack/quantization in Actuator
 - Add SLAM
 - Improve plots
