@@ -253,8 +253,8 @@ class BikeTrailer(object):
         self.trailerFront, = self.ax.plot(self.trailer.x, self.trailer.y, 'm*')
         self.tractorLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'k')
         self.trailerLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'b')
-        self.ax.set_xlim([-50, 50])
-        self.ax.set_ylim([-50, 50])
+        self.ax.set_xlim([-10, 10])
+        self.ax.set_ylim([-10, 10])
         self.ax.set_xlabel('Distance X')
         self.ax.set_ylabel('Distance Y')
         
@@ -360,8 +360,8 @@ class BikeTrailer(object):
         self.trailerLine.set_ydata([y_4, self.trailer.y])
         self.trailerLine.set_xdata([x_4, self.trailer.x])
         
-        self.ax.set_xlim([self.trailer.x - 50, self.trailer.x + 50])
-        self.ax.set_ylim([self.trailer.y - 50, self.trailer.y + 50])
+        self.ax.set_xlim([self.trailer.x - 10, self.trailer.x + 10])
+        self.ax.set_ylim([self.trailer.y - 10, self.trailer.y + 10])
         
 
         if(draw):

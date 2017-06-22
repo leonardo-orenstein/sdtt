@@ -18,7 +18,7 @@ class Planner(object):
         self.angle_track = None
         self.v_track = None
         
-        self.currGoal = 0
+        self.currGoal = 1
         self.trackLen = 0
         
         self.nextX = None
@@ -26,8 +26,8 @@ class Planner(object):
         self.nextAngle = None
         self.nextV = None
         
-        self.pathUpdateLookAhead = 10
-        self.pathUpdateDistance = 4
+        self.pathUpdateLookAhead = .5
+        self.pathUpdateDistance = 2
         self.headingWindow = 0
                 
         self.lastUpdate = 0
@@ -71,7 +71,7 @@ class Planner(object):
         self.v_track = np.array(v_ref)      
         self.trackLen = len(v_ref)
         
-    def smooth(self, path, weight_data = 0.5, weight_smooth = 0.2, tolerance = 0.000001):
+    def smooth(self, path, weight_data = 0.6, weight_smooth = 0.1, tolerance = 0.000001):
         '''
         Using the code for smooth function from the course the artificial inteligence 
         for robotics class
@@ -98,9 +98,10 @@ class Planner(object):
         self.currGoal = idx
         return idx
     
-    def updateGoal(self, x, y, v, dt, adaptativeUpdate = False):
+    def updateGoal(self, x, y, v, dt, adaptativeUpdate = True):
+#        print(self.currGoal)
         if(adaptativeUpdate == True):
-            pathUpdateDistance = abs(v*dt*self.pathUpdateLookAhead)
+            pathUpdateDistance = abs(v*self.pathUpdateLookAhead)
         else:
             pathUpdateDistance = self.pathUpdateDistance
             
@@ -120,8 +121,8 @@ class Planner(object):
         else:
             return [self.nextX, self.nextY, self.nextAngle, self.nextV]
         
-        lIdx = max(self.currGoal - 1, 0)
-        rIdx = min(self.currGoal + 1, self.trackLen - 1)
+        lIdx = max(self.currGoal - self.headingWindow, 0)
+        rIdx = min(self.currGoal + self.headingWindow, self.trackLen - 1)
         self.nextX = (self.x_track[lIdx] + self.x_track[self.currGoal] + self.x_track[rIdx])/3
         self.nextY = (self.y_track[lIdx] + self.y_track[self.currGoal] + self.y_track[rIdx])/3
         self.nextAngle = (self.angle_track[lIdx] + self.angle_track[self.currGoal] + self.angle_track[rIdx])/3 

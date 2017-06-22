@@ -164,13 +164,14 @@ class Vehicle(object):
         self.particleFilter.addData(acc, omega, dt, measurements)
 
         
-    def plot(self):
+    def plot(self, draw = True):
         '''
         Wrapper for the vizualizer to update the plot
         '''
         x, y        = self.gps.read()
         orientation = self.compass.read()
-        self.vizualizer.plot(x, y, orientation, self.length)
+#        x_goal, y_goal = self.planner.nextX, self.planner.nextY
+        self.vizualizer.plot(x, y, orientation, self.length, draw)
         
         
     def plot3d(self):

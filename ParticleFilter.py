@@ -9,13 +9,16 @@ import random
 import numpy as np
 
 class ParticleFilter(object):
-    def __init__(self, model,  x0, y0, theta0, phi0, v0, length, N = 1000):
+    def __init__(self, model,  x0, y0, theta0, phi0, v0, length, N = 500):
         self.errorPos         = 5
         self.errorPhi         = pi/6 
         self.errorOrientation = pi/6
         self.errorVelocity    = 10
         self.N = N
+        self.newSamples = int(0.10*N)
         self.p = []
+        self.model = model
+        
         x0Array = np.random.normal(x0, self.errorPos,N)
         y0Array = np.random.normal(y0, self.errorPos,N)
         theta0Array = np.random.normal(theta0, self.errorOrientation,N)
@@ -76,6 +79,12 @@ class ParticleFilter(object):
         # motion update (prediction)
 
         p2 = []
+        xArray = []
+        yArray = []
+        thetaArray = []
+        phiArray = []
+        vArray = []
+        
         for i in range(self.N):
             currP = self.p[i]
             currP.setAcceleration(acc)
@@ -83,6 +92,12 @@ class ParticleFilter(object):
             currP.updateStates(dt)
             currP.move(dt)
             p2.append(currP)
+            xArray = np.append(xArray, currP.x)
+            yArray = np.append(yArray, currP.y)
+            thetaArray = np.append(thetaArray , currP.orientation)
+            phiArray = np.append(phiArray, currP.phi)
+            vArray = np.append(vArray, currP.v)
+            
         self.p = p2
 
         # measurement update
@@ -95,14 +110,29 @@ class ParticleFilter(object):
 #        print(np.std(w))
 #        print()
         # resampling
+        x0Array = np.random.normal(np.mean(xArray), np.std(xArray),self.newSamples)
+        y0Array = np.random.normal(np.mean(yArray), np.std(yArray),self.newSamples)
+        theta0Array = np.random.normal(np.mean(thetaArray), np.std(thetaArray),self.newSamples)
+        phi0Array = np.random.normal(np.mean(phiArray), np.std(phiArray),self.newSamples)
+        v0Array = np.mean(vArray)*( 1 + np.random.normal(0, np.std(vArray),self.newSamples)/100)
+        
         p3 = []
+        for i in range(self.newSamples):
+            c = self.model(theta_0 = theta0Array[i], x_0 = x0Array[i], y_0 = y0Array[i],
+                          acc = acc, dPhi = omega, v = v0Array[i], phi = phi0Array[i],
+                          length = self.p[0].length, tailDistance = 0)
+            c.setNoise(self.errorPos, self.errorPhi, self.errorOrientation, self.errorVelocity)
+            p3.append(c)
+            
         index = int(random.random() * self.N)
         beta = 0.0
         mw = max(w)
-        for i in range(self.N):
+        for i in range(self.N-self.newSamples):
             beta += random.random() * 2.0 * mw
             while beta > w[index]:
                 beta -= w[index]
                 index = (index + 1) % self.N
             p3.append(self.p[index].duplicate())
         self.p = p3
+        
+        
