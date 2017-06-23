@@ -50,7 +50,7 @@ class Vizualizer(object):
         
         if(draw):
             self.fig.canvas.draw()
-#            plt.pause(0.001)    
+            plt.pause(0.001)    
             
     def plot3d(self, x, y, orientation):
         self.body3d.pos  = vector(x,y,0)

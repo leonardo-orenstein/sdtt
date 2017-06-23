@@ -8,6 +8,7 @@ from math import sin, cos, tan, pi, exp, sqrt
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import numpy as np
+from matplotlib.patches import Arrow
 
 class SimulationVehicle(object):
     '''
@@ -231,6 +232,7 @@ class BikeTrailer(object):
         self.trailerFront = None
         self.tractorLine = None
         self.trailerLine = None
+        self.directionArrow = None
     
     def setNoise(self, errorPos, errorPhi, errorOrientation, errorVelocity):
         self.tractor.setNoise(errorPos, errorPhi, errorOrientation, errorVelocity)
@@ -253,6 +255,11 @@ class BikeTrailer(object):
         self.trailerFront, = self.ax.plot(self.trailer.x, self.trailer.y, 'm*')
         self.tractorLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'k')
         self.trailerLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'b')
+        self.directionArrow = Arrow(self.tractor.x, self.tractor.y, 
+                                              0.1*self.tractor.v*cos(self.tractor.orientation + self.tractor.phi),
+                                              0.1*self.tractor.v*sin(self.tractor.orientation + self.tractor.phi),
+                                              color = 'c')
+        self.ax.add_patch(self.directionArrow)
         self.ax.set_xlim([-10, 10])
         self.ax.set_ylim([-10, 10])
         self.ax.set_xlabel('Distance X')
@@ -351,7 +358,13 @@ class BikeTrailer(object):
         self.tractorFront.set_xdata(self.tractor.x)
         self.tractorLine.set_ydata([self.tractor.y, self.trailer.y])
         self.tractorLine.set_xdata([self.tractor.x, self.trailer.x])
-
+        self.directionArrow.remove()
+        self.directionArrow = Arrow(self.tractor.x, self.tractor.y, 
+                                              0.1*self.tractor.v*cos(self.tractor.orientation + self.tractor.phi),
+                                              0.1*self.tractor.v*sin(self.tractor.orientation + self.tractor.phi),
+                                              color = 'c')
+        self.ax.add_patch(self.directionArrow)
+        
         self.trailerFront.set_ydata(self.trailer.y)
         self.trailerFront.set_xdata(self.trailer.x)
         
@@ -360,11 +373,12 @@ class BikeTrailer(object):
         self.trailerLine.set_ydata([y_4, self.trailer.y])
         self.trailerLine.set_xdata([x_4, self.trailer.x])
         
+        
         self.ax.set_xlim([self.trailer.x - 10, self.trailer.x + 10])
         self.ax.set_ylim([self.trailer.y - 10, self.trailer.y + 10])
         
 
         if(draw):
             self.fig.canvas.draw()
-            plt.pause(0.01)    
+            plt.pause(0.001)    
         

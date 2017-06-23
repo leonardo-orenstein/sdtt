@@ -149,7 +149,7 @@ class Vehicle(object):
         orientationHat  = self.compass.read()
         phiHat          = self.wheelAngle.read()
         vHat            = self.speedometer.read()
-        self.particleFilter = ParticleFilter(Bike, xHat, yHat, orientationHat, phiHat, vHat, self.length)
+        self.particleFilter = ParticleFilter(Bike, xHat, yHat, orientationHat, phiHat, vHat, self.length,  500)
         
     def updateFilter(self, dt):
         xHat, yHat      = self.gps.read()

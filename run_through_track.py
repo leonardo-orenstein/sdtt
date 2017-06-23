@@ -13,10 +13,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
 
-from scipy import interpolate
-import math
 from math import cos, sin, pi
 import random
+import timeit
 
 random.seed(123)
 np.random.seed(123)
@@ -26,9 +25,13 @@ np.random.seed(123)
 dt = 0.01
 
 a = -pi/4
-ss1 = Track.StraightSegment([i/20 if i > 100 else 12 - i/20 for i in range(400)] , a)
-acs = Track.ArcCurveSegment([20 for _ in range(40)], 10, a, dt)
-ss2 = Track.StraightSegment([2 + i/20 if i < 200 else 12 for i in range(400)] , acs.angles[-1])
+ss1 = Track.StraightSegment([2 + i/20 if i > 100 else 12 - i/20 for i in range(400)] , a)
+acs = Track.ArcCurveSegment([22 for _ in range(40)], 10, a, dt)
+ss2 = Track.StraightSegment([22 - i/20 if i < 200 else 12 for i in range(400)] , acs.angles[-1])
+
+#ss1 = Track.StraightSegment([20 for i in range(1000)] , a)
+#acs = Track.ArcCurveSegment([16 for _ in range(50)], 15, a, dt)
+#ss2 = Track.StraightSegment([20 for i in range(1000)] , acs.angles[-1])
 
 track = Track.Track([ss1,acs,ss2], dt)
 N = track.N
@@ -110,7 +113,7 @@ plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=2.0)
 #ax_vehicle.scatter(x,y, marker='*', s=4)
 #ax_path.scatter(x,y,marker='*', s=4)
 
-time_text = ax_simulation.text(0.02, 0.95, '', transform=ax_simulation.transAxes)
+time_text = ax_simulation.text(0.02, 0.05, '', transform=ax_simulation.transAxes)
 
 #plt.show()
 
@@ -131,7 +134,7 @@ sdv  = Vehicle(length = 4, fig = fig, ax = ax_vehicle)
 sdv.pilot.initPhiPIDController(K_p = 32, K_i = 0.4, K_d = 1)
 
 # Set the track to follow. We are tracking a gps reference here
-sdv.planner.setTrack(x, y, angles, speedLimit)
+sdv.planner.setTrack(x, y, angles, speedLimit, False)
 
 # connect the autonomous vehcile system to the 'physical' system
 sdv.connectToSimulation(truck.tractor)
@@ -150,19 +153,33 @@ sdv.steering.setValue(0)
 
 # simulation loop
 
+start = timeit.default_timer()
+
 # starts the system and acquire first positions
 for _ in range(int(1/dt)):
     sdv.scan()
     sdv.updateFilter(dt)
     truck.move(dt)
+    time_text.set_text('Initializng systems' )
+    truck.plot(False)
+    sdv.plot(False)
     
 ## Total time of the simulation
-#totalTime = 8
+#totalTime = 9
 #t = 0  
 #RSE = 0  
+#linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
+#tunnelCounter = 0
 #while t < totalTime:
-#    
-#    sdv.scan()
+##    if(abs(t - 6) < dt/10):
+##        tunnelCounter = .5
+##        print('Tunnel!')
+#        
+#    if(tunnelCounter > 0 ):
+#        tunnelCounter -= dt
+#    else:
+#        sdv.scan()  
+#        
 #    sdv.updateFilter(dt)
 #
 #    omega = sdv.headingTracker(dt)
@@ -179,18 +196,28 @@ for _ in range(int(1/dt)):
 ##        print(phi)
 #        truck.plot()
 #        sdv.plot()
+#        time_text.set_text('time = %.1f' % t )
 ##        xHat,yHat = sdv.gps.read()
 ##        orientationHat = sdv.compass.read()
 ##        body3d.pos  = vector(x,y,0)
 ##        body3d.axis = vector(cos(orientation), sin(orientation), 0)
-#        ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
+#        linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
+#        linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))
 #            
 #        truck.timeOfLastPlot = t
 #
 #    t += dt
+#
+##Your statements here
+#
+#stop = timeit.default_timer()
+#
+#print(stop - start)
 #print('MRSE:')
 #print(RSE/(totalTime/dt))
-
+#
+# Save the animation!
+#
 linePath = None
 def init():
     global truck, fig, ax, ax2, linePath

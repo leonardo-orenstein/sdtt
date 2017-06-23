@@ -64,10 +64,16 @@ class Planner(object):
             self.x_track[i] = self.x_track[i] + cos(self.angle_track[i-1])*self.v_track[i-1]*dt
             self.y_track[i] = self.y_track[i] + sin(self.angle_track[i-1])*self.v_track[i-1]*dt
 
-    def setTrack(self, x_ref, y_ref, angle_ref, v_ref):
-        self.x_track = np.array(self.smooth(x_ref))
-        self.y_track = np.array(self.smooth(y_ref))
-        self.angle_track = np.array(self.smooth(angle_ref))
+    def setTrack(self, x_ref, y_ref, angle_ref, v_ref, smoothTrack = True):
+        if(smoothTrack):
+            self.x_track = np.array(self.smooth(x_ref))
+            self.y_track = np.array(self.smooth(y_ref))
+            self.angle_track = np.array(self.smooth(angle_ref))
+        else:
+            self.x_track = np.array(x_ref)
+            self.y_track = np.array(y_ref)
+            self.angle_track = np.array(angle_ref)
+            
         self.v_track = np.array(v_ref)      
         self.trackLen = len(v_ref)
         
