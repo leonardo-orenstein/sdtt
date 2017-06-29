@@ -112,11 +112,11 @@ class Bike(SimulationVehicle):
         self.v   += self.acc*dt
         self.phi += self.omega*dt
         
-    def measurementProb(self, measurements):
+    def measurementProb(self, measurements, V):
 
         # calculate the correct measurement
         predictedMeasurements = self.getStates() # Our sense function took 0 as an argument to switch off noise.
-        V = [self.errorPos, self.errorPos, self.errorOrientation, self.errorPhi, self.errorVelocity*predictedMeasurements[4]]
+
         # compute errors
         error = 1.0
         for i in range(len(measurements)):
@@ -130,11 +130,8 @@ class Bike(SimulationVehicle):
         return error
 
     def move(self, dt): 
-
         distance = self.v*dt
         steering = self.phi
-        #forward = random.gauss(forward, self.distance_noise)
-        #steering= random.gauss(steering, self.steering_noise)
         
         beta = distance/self.length*tan(steering)
         
@@ -164,45 +161,8 @@ class Bike(SimulationVehicle):
             orientation-= 2*pi
         
         self.set_pose(orientation, x, y)
-        
-        
+            
         return ([dRotation, dTranslation], beta)
-    
-    
-#    def move(self, steering, distance): 
-#
-#        #forward = random.gauss(forward, self.distance_noise)
-#        #steering= random.gauss(steering, self.steering_noise)
-#        
-#        beta = distance/self.length*tan(steering)
-#        
-#        if(beta > 0.001):
-#            R = distance/beta
-#            
-#            dx = - sin(self.orientation)*R + sin(self.orientation + beta)*R
-#            dy = + cos(self.orientation)*R - cos(self.orientation + beta)*R
-#        
-#            dRotation = [ self.CoM*(cos(self.orientation + beta) - cos(self.orientation)),
-#                          self.CoM*(sin(self.orientation + beta) - sin(self.orientation))]
-#
-# 
-#            dTranslation = [dx - dRotation[0],
-#                            dy - dRotation[1]] 
-#        else:
-#            dx = cos(self.orientation)*distance
-#            dy = sin(self.orientation)*distance
-#            
-#            dRotation = [0,0]
-#            dTranslation = [dx, dy]
-#        
-#        x = self.x + dx
-#        y = self.y + dy
-#        orientation = (self.orientation + beta) % (2*pi)
-#        
-#        self.set_pose(orientation, x, y)
-#        
-#        
-#        return ([dRotation, dTranslation], beta)
     
     def print(self):
         print(self.x)

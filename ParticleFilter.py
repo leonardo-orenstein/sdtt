@@ -18,6 +18,7 @@ class ParticleFilter(object):
         self.newSamples = int(0.10*N)
         self.p = []
         self.model = model
+        self.w = []
         
         x0Array = np.random.normal(x0, self.errorPos,N)
         y0Array = np.random.normal(y0, self.errorPos,N)
@@ -44,18 +45,12 @@ class ParticleFilter(object):
     def getPhi(self):
         phi = 0.0
         for i in range(self.N):
-            # orientation is tricky because it is cyclic. By normalizing
-            # around the first particle we are somewhat more robust to
-            # the 0=2pi problem
             phi += self.p[i].phi
         return phi / self.N
         
     def getOrientation(self):
         orientation = 0.0
         for i in range(self.N):
-            # orientation is tricky because it is cyclic. By normalizing
-            # around the first particle we are somewhat more robust to
-            # the 0=2pi problem
             orientation += self.p[i].orientation 
         return orientation / self.N
     
@@ -65,7 +60,75 @@ class ParticleFilter(object):
             v += self.p[i].v
         return v / self.N
         
-    def addData(self, acc, omega, dt, measurements): 
+    def updateParticles(self, acc, omega, dt):
+        p2 = []
+        
+        for i in range(self.N):
+            currP = self.p[i]
+            currP.setAcceleration(acc)
+            currP.setOmega(omega)
+            currP.updateStates(dt)
+            currP.move(dt)
+            p2.append(currP)
+            
+        self.p = p2
+
+    def weightParticles(self, measurements, V):
+        # measurement update
+        self.w = []
+        for i in range(self.N):
+            self.w.append(self.p[i].measurementProb(measurements, V))
+   
+        
+    def resampleParticles(self):
+        '''
+        Resamples the particles      
+        '''
+        xArray = []
+        yArray = []
+        thetaArray = []
+        phiArray = []
+        vArray = []
+        
+        acc = self.p[0].acc
+        omega = self.p[0].omega
+        
+        for i in range(self.N):
+            currP = self.p[i]
+            xArray = np.append(xArray, currP.x)
+            yArray = np.append(yArray, currP.y)
+            thetaArray = np.append(thetaArray , currP.orientation)
+            phiArray = np.append(phiArray, currP.phi)
+            vArray = np.append(vArray, currP.v)
+   
+        # resampling
+        x0Array = np.random.normal(np.mean(xArray), np.std(xArray),self.newSamples)
+        y0Array = np.random.normal(np.mean(yArray), np.std(yArray),self.newSamples)
+        theta0Array = np.random.normal(np.mean(thetaArray), np.std(thetaArray),self.newSamples)
+        phi0Array = np.random.normal(np.mean(phiArray), np.std(phiArray),self.newSamples)
+        v0Array = np.mean(vArray)*( 1 + np.random.normal(0, np.std(vArray),self.newSamples)/100)
+        
+        p3 = []
+        for i in range(self.newSamples):
+            c = self.model(theta_0 = theta0Array[i], x_0 = x0Array[i], y_0 = y0Array[i],
+                          acc = acc, dPhi = omega, v = v0Array[i], phi = phi0Array[i],
+                          length = self.p[0].length, tailDistance = 0)
+            c.setNoise(self.errorPos, self.errorPhi, self.errorOrientation, self.errorVelocity)
+            p3.append(c)
+            
+        index = int(random.random() * self.N)
+        beta = 0.0
+        mw = max(self.w)
+        for i in range(self.N-self.newSamples):
+            beta += random.random() * 2.0 * mw
+            while beta > self.w[index]:
+                beta -= self.w[index]
+                index = (index + 1) % self.N
+            p3.append(self.p[index].duplicate())
+        self.p = p3
+        
+        
+    def addData(self, acc, omega, dt, measurements, V): 
         '''
         Adapting the code for particle filter from the Udacity course artificial inteligence 
         for robotics 
@@ -103,12 +166,8 @@ class ParticleFilter(object):
         # measurement update
         w = []
         for i in range(self.N):
-            w.append(self.p[i].measurementProb(measurements))
+            w.append(self.p[i].measurementProb(measurements, V))
             
-#        print(np.mean(w))
-#        print(sum(np.abs(w)))
-#        print(np.std(w))
-#        print()
         # resampling
         x0Array = np.random.normal(np.mean(xArray), np.std(xArray),self.newSamples)
         y0Array = np.random.normal(np.mean(yArray), np.std(yArray),self.newSamples)

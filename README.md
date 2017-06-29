@@ -5,7 +5,7 @@ An autonomous vehicle implementation
   <img src="\truck_demo.gif" width="350"/>
 </p>
 
-In case anyone steps by. The goal of this project is build an autonomous vehicle framework, mostly as a learning enviroment. The idea would be the provide the segmented infrastructure, whith each individual module being independent (i.e.: the controller is agnostic to what sensor is being used). Right now is running on simulation alone, but the idea would be to have it connect to hardware (the donkey project being the prime candidate - http://www.donkeycar.com/)
+In case anyone steps by. The goal of this project is build an autonomous vehicle framework, mostly as a learning enviroment. The idea is to a segmented infrastructure, where each individual module is independent (e.g.: the controller is agnostic to what sensor model is being used and how it was implemented). Right now is running on simulation alone, but the plan is to have it connected to a hardware (the donkey project being the prime candidate - http://www.donkeycar.com/)
 
 # Getting started
 Just clone the code and run the run_through_track.py or the jupyter notebook (although I think the animation runs better on the first).

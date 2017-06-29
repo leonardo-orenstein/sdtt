@@ -136,23 +136,29 @@ sdv.pilot.initPhiPIDController(K_p = 32, K_i = 0.4, K_d = 1)
 # Set the track to follow. We are tracking a gps reference here
 sdv.planner.setTrack(x, y, angles, speedLimit, False)
 
+def laneTracker():
+    global truck
+    return truck.tractor.x, truck.tractor.y
+
 # connect the autonomous vehcile system to the 'physical' system
-sdv.connectToSimulation(truck.tractor)
+sdv.connectToSimulation(truck.tractor, laneTracker)
+sdv.compass.setUncertanty(2*pi/180)
+sdv.wheelAngle.setUncertanty(1*pi/180)
+sdv.speedometer.setUncertanty(5, True)
+sdv.gps.setUncertanty(5)
+sdv.laneTracker.setUncertanty(.1)
 
 # First scan to get an initial position
 sdv.scan()
 
 # create the particle filter
 sdv.createFilter()
+
 # starts the inputs at 0
 sdv.engine.setValue(0)
 sdv.steering.setValue(0)
 
-
-#body3d = box(pos=vector(0,0,0), axis=vector(0, 0, 0), length=length, height=2, width=2)
-
 # simulation loop
-
 start = timeit.default_timer()
 
 # starts the system and acquire first positions
@@ -164,115 +170,107 @@ for _ in range(int(1/dt)):
     truck.plot(False)
     sdv.plot(False)
     
-## Total time of the simulation
-#totalTime = 9
-#t = 0  
-#RSE = 0  
-#linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
-#tunnelCounter = 0
-#while t < totalTime:
-##    if(abs(t - 6) < dt/10):
-##        tunnelCounter = .5
-##        print('Tunnel!')
-#        
-#    if(tunnelCounter > 0 ):
-#        tunnelCounter -= dt
-#    else:
-#        sdv.scan()  
-#        
-#    sdv.updateFilter(dt)
-#
-#    omega = sdv.headingTracker(dt)
-##    omega = sdv.phiController(dt)
-##    omega = sdv.cteController(dt)
-#
-#    acc = sdv.velocityController(dt)
-#    
-#    sdv.engine.setValue(acc)
-#    sdv.steering.setValue(omega)
-#    RSE += ((sdv.planner.nextX - truck.tractor.x)**2 + (sdv.planner.nextY - truck.tractor.y)**2)**0.5
-#    truck.move(dt)
-#    if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):   
-##        print(phi)
-#        truck.plot()
-#        sdv.plot()
-#        time_text.set_text('time = %.1f' % t )
-##        xHat,yHat = sdv.gps.read()
-##        orientationHat = sdv.compass.read()
-##        body3d.pos  = vector(x,y,0)
-##        body3d.axis = vector(cos(orientation), sin(orientation), 0)
-#        linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
-#        linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))
-#            
-#        truck.timeOfLastPlot = t
-#
-#    t += dt
-#
-##Your statements here
-#
-#stop = timeit.default_timer()
-#
-#print(stop - start)
-#print('MRSE:')
-#print(RSE/(totalTime/dt))
-#
-# Save the animation!
-#
-linePath = None
-def init():
-    global truck, fig, ax, ax2, linePath
-    
-    ax_simulation.plot(xUpper, yUpper, 'k-')
-    ax_simulation.plot(xLower, yLower, 'k-')
-    ax_simulation.fill_between(xLower, yLower,yUpper, facecolor='black', interpolate = False)
-    ax_simulation.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate = False)
-    ax_simulation.plot(xCenterLane, yCenterLane,'w--')
-    ax_simulation.scatter(x,y,c=speedLimit, marker='*', s=4)
-    
-    ax_path.scatter(x,y,c=speedLimit, marker='*', s=4)
-    ax_path.fill_between(xLower, yLower,yUpper, facecolor='black', interpolate = False)
-    ax_path.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate = False)
-    ax_path.plot(xCenterLane, yCenterLane,'w--')
-    ax_path.plot(xUpper, yUpper, 'k-')
-    ax_path.plot(xLower, yLower, 'k-')
-    
-    linePath, = ax_path.plot(truck.tractor.x,truck.tractor.y, 'y*')
-
-    time_text.set_text('')
-
-    return (truck.tractorLine, sdv.vizualizer.body, linePath, time_text)
-
-def animate(f):
-    global truck, sdv, dt, linePath
-
-    sdv.scan()
+# Total time of the simulation
+totalTime = 9
+t = 0  
+RSE = 0  
+linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
+tunnelCounter = 0
+while t < totalTime:
+#    if(abs(t - 6) < dt/10):
+#        tunnelCounter = .5
+#        print('Tunnel!')
+        
+    if(tunnelCounter > 0 ):
+        tunnelCounter -= dt
+    else:
+        sdv.scan()  
+        
     sdv.updateFilter(dt)
 
     omega = sdv.headingTracker(dt)
+#    omega = sdv.phiController(dt)
+#    omega = sdv.cteController(dt)
+
     acc = sdv.velocityController(dt)
     
     sdv.engine.setValue(acc)
     sdv.steering.setValue(omega)
-    
+    RSE += ((sdv.planner.nextX - truck.tractor.x)**2 + (sdv.planner.nextY - truck.tractor.y)**2)**0.5
     truck.move(dt)
-#    if(f % 10 == 0):
-    truck.plot(False)
-    sdv.plot(False)
+    if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):   
+        truck.plot()
+        sdv.plot()
+        time_text.set_text('time = %.1f' % t )
+        linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
+        linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))  
+        truck.timeOfLastPlot = t
 
-    linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
-    linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))
-    time_text.set_text('time = %.1f' % truck.timeOfLastPlot )
+    t += dt
 
-    return (truck.tractorLine, sdv.vizualizer.body, linePath, time_text)
+stop = timeit.default_timer()
 
-
-#while t < totalTime:
-# call the animator. blit=True means only re-draw the parts that have changed.
-anim = animation.FuncAnimation(fig, animate, init_func=init,
-                               frames=800, interval=5, save_count = 50)    
+print(stop - start)
+print('MRSE:')
+print(RSE/(totalTime/dt))
 #
-### Set up formatting for the movie files
-#Writer = animation.writers['ffmpeg']
-#writer = Writer(fps=15, metadata=dict(artist='leo.ore'), bitrate=1800)
-
-anim.save('truck.gif', writer = 'imagemagick')
+# Save the animation!
+##
+#linePath = None
+#def init():
+#    global truck, fig, ax, ax2, linePath
+#    
+#    ax_simulation.plot(xUpper, yUpper, 'k-')
+#    ax_simulation.plot(xLower, yLower, 'k-')
+#    ax_simulation.fill_between(xLower, yLower,yUpper, facecolor='black', interpolate = False)
+#    ax_simulation.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate = False)
+#    ax_simulation.plot(xCenterLane, yCenterLane,'w--')
+#    ax_simulation.scatter(x,y,c=speedLimit, marker='*', s=4)
+#    
+#    ax_path.scatter(x,y,c=speedLimit, marker='*', s=4)
+#    ax_path.fill_between(xLower, yLower,yUpper, facecolor='black', interpolate = False)
+#    ax_path.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate = False)
+#    ax_path.plot(xCenterLane, yCenterLane,'w--')
+#    ax_path.plot(xUpper, yUpper, 'k-')
+#    ax_path.plot(xLower, yLower, 'k-')
+#    
+#    linePath, = ax_path.plot(truck.tractor.x,truck.tractor.y, 'y*')
+#
+#    time_text.set_text('')
+#
+#    return (truck.tractorLine, sdv.vizualizer.body, linePath, time_text)
+#
+#def animate(f):
+#    global truck, sdv, dt, linePath
+#
+#    sdv.scan()
+#    sdv.updateFilter(dt)
+#
+#    omega = sdv.headingTracker(dt)
+#    acc = sdv.velocityController(dt)
+#    
+#    sdv.engine.setValue(acc)
+#    sdv.steering.setValue(omega)
+#    
+#    truck.move(dt)
+##    if(f % 10 == 0):
+#    truck.plot(False)
+#    sdv.plot(False)
+#
+#    linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
+#    linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))
+#    time_text.set_text('time = %.1f' % truck.timeOfLastPlot )
+#
+#    return (truck.tractorLine, sdv.vizualizer.body, linePath, time_text)
+#
+#
+##while t < totalTime:
+## call the animator. blit=True means only re-draw the parts that have changed.
+#anim = animation.FuncAnimation(fig, animate, init_func=init,
+#                               frames=800, interval=5, save_count = 50)    
+##
+#### Set up formatting for the movie files
+##Writer = animation.writers['ffmpeg']
+##writer = Writer(fps=15, metadata=dict(artist='leo.ore'), bitrate=1800)
+#
+#anim.save('truck.gif', writer = 'imagemagick')
