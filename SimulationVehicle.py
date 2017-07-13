@@ -164,11 +164,15 @@ class Bike(SimulationVehicle):
             
         return ([dRotation, dTranslation], beta)
     
-    def print(self):
-        print(self.x)
-        print(self.y)
-        print(self.orientation)
-        
+    def printStatus(self):
+        if(sys.version_info.major == 3):
+            print(self.x)
+            print(self.y)
+            print(self.orientation)
+#        else:
+#            print self.x
+ #           print self.y
+  #          print self.orientation
 
         
 class BikeTrailer(object):
@@ -299,20 +303,33 @@ class BikeTrailer(object):
             self.timeOfLastPlot = t
             
         return [dX_1, dY_1, dDelta_1, dDelta_2]      
-    
-    def print(self):
-        print('Tractor pose')
-        self.tractor.print()
-        
-        print('Trailer pose')
-        self.trailer.print()
-        
-        print('Velocity')
-        print(self.tractor.cruiseControl.v)
-        
-        print('angle')
-        print(self.tractor.cruiseControl.phi)
-        
+    '''
+    def printStatus(self):
+        if(sys.version_info.major == 3):
+            print('Tractor pose')
+            self.tractor.printStatus()
+            
+            print('Trailer pose')
+            self.trailer.printStatus()
+            
+            print('Velocity')
+            print(self.tractor.cruiseControl.v)
+            
+            print('angle')
+            print(self.tractor.cruiseControl.phi)
+        else:
+            print 'Tractor pose'
+            self.tractor.printStatus()
+            
+            print 'Trailer pose'
+            self.trailer.printStatus()
+            
+            print 'Velocity' 
+            print self.tractor.cruiseControl.v
+            
+            print 'angle'
+            print self.tractor.cruiseControl.phi
+    '''            
     def plot(self, draw = True):
         self.tractorFront.set_ydata(self.tractor.y)
         self.tractorFront.set_xdata(self.tractor.x)

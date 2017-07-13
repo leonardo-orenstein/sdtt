@@ -7,8 +7,7 @@ Created on Sun Jun 18 20:25:02 2017
 import cv2
 import numpy as np
 from collections import namedtuple
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+from math import cos
 
 CamParams = namedtuple("CamParams", "height width heightCalibration widthCalibration leftEdge rightEdge px2m y_1Calibration y_2Calibration y_3Calibration y_4Calibration x_1Calibration x_2Calibration x_3Calibration x_4Calibration")
 
@@ -52,7 +51,7 @@ class SensorCamera(Sensor):
         self.rightEdge  = params.rightEdge
         self.px2m       = params.px2m       
         self.threshold = 150.0
-        self.laneWidth = 0.26 #meters
+        self.laneWidth = 0.25 #meters
 
         dest =  np.float32([[0,0],[0,self.height],[self.width,0],[self.width,self.height]])
         
@@ -101,18 +100,24 @@ class SensorCamera(Sensor):
         yRight, xRight= np.where(rightSide > self.threshold)
         xRight += midPoint
         
-        xArrayLeft, yArrayLeft = self.findLanes(xLeft, yLeft, self.height, 1)
-        xArrayRight, yArrayRight = self.findLanes(xRight, yRight, self.height, 1)
+        xArrayLeft, yArrayLeft, angleArrayLeft = self.findLanes(xLeft, yLeft, self.height, 1)
+        xArrayRight, yArrayRight, angleArrayRight = self.findLanes(xRight, yRight, self.height, 1)
         
-        return ((xArrayLeft, yArrayLeft), (xArrayRight, yArrayRight))
+        return ((xArrayLeft, yArrayLeft, angleArrayLeft), (xArrayRight, yArrayRight, angleArrayRight))
     
     def getPostion(self, frame):
-        ((xArrayLeft, yArrayLeft), (xArrayRight, yArrayRight)) = self.processFrame(frame)
+        ((xArrayLeft, yArrayLeft, angleArrayLeft), (xArrayRight, yArrayRight, angleArrayRight)) = self.processFrame(frame)
+                    
         midPoint = np.int64(self.width/2)
 
-        distanceToLeftLane = (midPoint + xArrayLeft[0])*self.px2m
-        distanceToRightLane = (xArrayRight[0] - midPoint)*self.px2m
-        return (xArrayRight[0] - xArrayLeft[0])*self.px2m/2
+        distanceToLeftLane = (midPoint - xArrayLeft[0])*cos(angleArrayLeft[0])*self.px2m
+        distanceToRightLane = (xArrayRight[0] - midPoint)*cos(angleArrayRight[0])*self.px2m
+        
+        print distanceToLeftLane 
+        print distanceToRightLane 
+        print
+        return (distanceToLeftLane + (self.laneWidth - distanceToRightLane))/2
+#        return (xArrayRight[0] - xArrayLeft[0])*self.px2m/2
     
 
     def scan(self):
@@ -134,15 +139,19 @@ class SensorCamera(Sensor):
         yArray = np.zeros(N) 
         yArray[0] = 0
     
+        angleArray = np.zeros(N)
+        angleArray[0] = p[1]
+        
         for i in range(1,N):
             yArray[i] = np.int64((i+1)*yLen/N)
             xArray[i] = np.int64(p[0]*yArray[i]**2 + p[1]*yArray[i] + p[2])
-    
-        return xArray, yArray        
+            angleArray[i] = p[0]*yArray[i]*2 + p[1]
+        
+        return xArray, yArray, angleArray  
     
     def draw(self):
         frame = self.scanner()
-        ((xArrayLeft, yArrayLeft), (xArrayRight, yArrayRight)) = self.processFrame(frame)
+        ((xArrayLeft, yArrayLeft, _), (xArrayRight, yArrayRight, _)) = self.processFrame(frame)
         self.__draw__(frame, xArrayLeft, yArrayLeft)
         self.__draw__(frame, xArrayRight, yArrayRight)
         cv2.imshow('Camera',frame)
