@@ -25,9 +25,9 @@ np.random.seed(123)
 dt = 0.01
 
 a = -pi/4
-ss1 = Track.StraightSegment([2 + i/20 if i > 100 else 12 - i/20 for i in range(400)] , a)
-acs = Track.ArcCurveSegment([22 for _ in range(40)], 10, a, dt)
-ss2 = Track.StraightSegment([22 - i/20 if i < 200 else 12 for i in range(400)] , acs.angles[-1])
+ss1 = Track.StraightSegment([2.0 + i/20.0 if i > 100.0 else 12.0 - i/20.0 for i in range(400)] , a)
+acs = Track.ArcCurveSegment([22.0 for _ in range(40)], 10, a, dt)
+ss2 = Track.StraightSegment([22.0 - i/20.0 if i < 200.0 else 12.0 for i in range(400)] , acs.angles[-1])
 
 #ss1 = Track.StraightSegment([20 for i in range(1000)] , a)
 #acs = Track.ArcCurveSegment([16 for _ in range(50)], 15, a, dt)
@@ -43,11 +43,11 @@ x = track.x
 y = track.y
 
 xUpper = track.xUpper
-xLower = track.xLower 
-yUpper = track.yUpper 
-yLower = track.yLower 
-xCenterLane = track.xCenterLane 
-yCenterLane = track.yCenterLane 
+xLower = track.xLower
+yUpper = track.yUpper
+yLower = track.yLower
+xCenterLane = track.xCenterLane
+yCenterLane = track.yCenterLane
 
 #speedLimit = [i/20 if i > N/2 else 2 + (N/2)/20 - i/20 for i in range(0,N)]
 ##speedLimit = [20 for i in range(0,N)]
@@ -118,8 +118,8 @@ time_text = ax_simulation.text(0.02, 0.05, '', transform=ax_simulation.transAxes
 #plt.show()
 
 # Create virtual vehicle (simulation)
-truck = BikeTrailer(theta = -pi/6, x_0 = x[0], y_0 = y[0], lengthTractor = 4, lengthTrailer = 10, tailDistance = 0.5)
-truck.setNoise(errorPos = 2, errorPhi = 2*pi/180, errorOrientation = 5*pi/180, errorVelocity = 5)
+truck = BikeTrailer(theta = -pi/6.0, x_0 = x[0], y_0 = y[0], lengthTractor = 4.0, lengthTrailer = 10.0, tailDistance = 0.5)
+truck.setNoise(errorPos = 2.0, errorPhi = 2.0*pi/180, errorOrientation = 5.0*pi/180, errorVelocity = 5.0)
 
 truck.createPlot(fig, ax_simulation)
 truck.tractor.v = 0
@@ -131,7 +131,7 @@ truck.plotRefreshRate = .1
 sdv  = Vehicle(length = 4, fig = fig, ax = ax_vehicle)
 
 # Initializes the controller
-sdv.pilot.initPhiPIDController(K_p = 32, K_i = 0.4, K_d = 1)
+sdv.pilot.initPhiPIDController(K_p = 32.0, K_i = 0.4, K_d = 1.0)
 
 # Set the track to follow. We are tracking a gps reference here
 sdv.planner.setTrack(x, y, angles, speedLimit, False)
@@ -142,10 +142,10 @@ def laneTracker():
 
 # connect the autonomous vehcile system to the 'physical' system
 sdv.connectToSimulation(truck.tractor, laneTracker)
-sdv.compass.setUncertanty(2*pi/180)
-sdv.wheelAngle.setUncertanty(1*pi/180)
-sdv.speedometer.setUncertanty(5, True)
-sdv.gps.setUncertanty(5)
+sdv.compass.setUncertanty(2.0*pi/180.0)
+sdv.wheelAngle.setUncertanty(1.0*pi/180.0)
+sdv.speedometer.setUncertanty(5.0, True)
+sdv.gps.setUncertanty(5.0)
 sdv.laneTracker.setUncertanty(.1)
 
 # First scan to get an initial position
@@ -155,8 +155,8 @@ sdv.scan()
 sdv.createFilter()
 
 # starts the inputs at 0
-sdv.engine.setValue(0)
-sdv.steering.setValue(0)
+sdv.engine.setValue(0.0)
+sdv.steering.setValue(0.0)
 
 # simulation loop
 start = timeit.default_timer()
@@ -169,23 +169,23 @@ for _ in range(int(1/dt)):
     time_text.set_text('Initializng systems' )
     truck.plot(False)
     sdv.plot(False)
-    
+
 # Total time of the simulation
 totalTime = 9
-t = 0  
-RSE = 0  
+t = 0
+RSE = 0
 linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
 tunnelCounter = 0
 while t < totalTime:
 #    if(abs(t - 6) < dt/10):
 #        tunnelCounter = .5
 #        print('Tunnel!')
-        
+
     if(tunnelCounter > 0 ):
         tunnelCounter -= dt
     else:
-        sdv.scan()  
-        
+        sdv.scan()
+
     sdv.updateFilter(dt)
 
     omega = sdv.headingTracker(dt)
@@ -193,17 +193,17 @@ while t < totalTime:
 #    omega = sdv.cteController(dt)
 
     acc = sdv.velocityController(dt)
-    
+
     sdv.engine.setValue(acc)
     sdv.steering.setValue(omega)
     RSE += ((sdv.planner.nextX - truck.tractor.x)**2 + (sdv.planner.nextY - truck.tractor.y)**2)**0.5
     truck.move(dt)
-    if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):   
+    if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):
         truck.plot()
         sdv.plot()
         time_text.set_text('time = %.1f' % t )
         linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
-        linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))  
+        linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))
         truck.timeOfLastPlot = t
 
     t += dt
@@ -219,21 +219,21 @@ print(RSE/(totalTime/dt))
 #linePath = None
 #def init():
 #    global truck, fig, ax, ax2, linePath
-#    
+#
 #    ax_simulation.plot(xUpper, yUpper, 'k-')
 #    ax_simulation.plot(xLower, yLower, 'k-')
 #    ax_simulation.fill_between(xLower, yLower,yUpper, facecolor='black', interpolate = False)
 #    ax_simulation.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate = False)
 #    ax_simulation.plot(xCenterLane, yCenterLane,'w--')
 #    ax_simulation.scatter(x,y,c=speedLimit, marker='*', s=4)
-#    
+#
 #    ax_path.scatter(x,y,c=speedLimit, marker='*', s=4)
 #    ax_path.fill_between(xLower, yLower,yUpper, facecolor='black', interpolate = False)
 #    ax_path.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate = False)
 #    ax_path.plot(xCenterLane, yCenterLane,'w--')
 #    ax_path.plot(xUpper, yUpper, 'k-')
 #    ax_path.plot(xLower, yLower, 'k-')
-#    
+#
 #    linePath, = ax_path.plot(truck.tractor.x,truck.tractor.y, 'y*')
 #
 #    time_text.set_text('')
@@ -248,10 +248,10 @@ print(RSE/(totalTime/dt))
 #
 #    omega = sdv.headingTracker(dt)
 #    acc = sdv.velocityController(dt)
-#    
+#
 #    sdv.engine.setValue(acc)
 #    sdv.steering.setValue(omega)
-#    
+#
 #    truck.move(dt)
 ##    if(f % 10 == 0):
 #    truck.plot(False)
@@ -267,7 +267,7 @@ print(RSE/(totalTime/dt))
 ##while t < totalTime:
 ## call the animator. blit=True means only re-draw the parts that have changed.
 #anim = animation.FuncAnimation(fig, animate, init_func=init,
-#                               frames=800, interval=5, save_count = 50)    
+#                               frames=800, interval=5, save_count = 50)
 ##
 #### Set up formatting for the movie files
 ##Writer = animation.writers['ffmpeg']
