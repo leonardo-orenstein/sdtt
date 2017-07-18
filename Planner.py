@@ -32,8 +32,8 @@ class Planner(object):
         self.lastUpdate = 0
 
 		  # Parameters for the algorithms
-        self.pathUpdateLookAhead = .5
-        self.pathUpdateDistance = 2
+        self.pathUpdateLookAhead = .2
+        self.minPathUpdateDistance = 2
         self.headingWindow = 0
 
     def setTrack_XY(self, x_ref, y_ref, dt = 1):
@@ -129,6 +129,7 @@ class Planner(object):
         '''
         distance = (self.x_track - x)**2 + (self.y_track - y)**2
         idx = distance.argmin()
+#        self.currGoal = max(self.currGoal, idx)
         self.currGoal = idx
         return idx
 
@@ -139,7 +140,10 @@ class Planner(object):
         if(adaptativeUpdate == True):
             pathUpdateDistance = abs(v*self.pathUpdateLookAhead)
         else:
-            pathUpdateDistance = self.pathUpdateDistance
+            pathUpdateDistance = self.minPathUpdateDistance
+
+        if(pathUpdateDistance < self.minPathUpdateDistance):
+            pathUpdateDistance = self.minPathUpdateDistance
 
         lIdx = max(self.currGoal - self.headingWindow , 0)
         rIdx = min(self.currGoal + self.headingWindow , self.trackLen - 1)

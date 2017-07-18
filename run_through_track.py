@@ -25,8 +25,10 @@ np.random.seed(123)
 dt = 0.01
 
 a = -pi/4
+#a = pi/4
 ss1 = Track.StraightSegment([2.0 + i/20.0 if i > 100.0 else 12.0 - i/20.0 for i in range(400)] , a)
 acs = Track.ArcCurveSegment([22.0 for _ in range(40)], 10, a, dt)
+#acs = Track.ArcCurveSegment([22.0 for _ in range(40)], 5, a, dt)
 ss2 = Track.StraightSegment([22.0 - i/20.0 if i < 200.0 else 12.0 for i in range(400)] , acs.angles[-1])
 
 #ss1 = Track.StraightSegment([20 for i in range(1000)] , a)
@@ -49,32 +51,6 @@ yLower = track.yLower
 xCenterLane = track.xCenterLane
 yCenterLane = track.yCenterLane
 
-#speedLimit = [i/20 if i > N/2 else 2 + (N/2)/20 - i/20 for i in range(0,N)]
-##speedLimit = [20 for i in range(0,N)]
-#
-#angles = [-pi/4 if i < N/2 - 1 else pi/4  for i in range(0,N)]
-#
-#x = [0]
-#y = [0]
-#roadWidth = 7
-#for i in range(1,N):
-#    x.append(speedLimit[i]*dt*cos(angles[i]) + x[i-1])
-#    y.append(speedLimit[i]*dt*sin(angles[i]) + y[i-1])
-#
-#xUpper = []
-#xLower = []
-#yUpper = []
-#yLower = []
-#xCenterLane = []
-#yCenterLane = []
-#for i in range(0,N):
-#    xCenterLane.append(x[i] + sin(-angles[i])*roadWidth/4)
-#    yCenterLane.append(y[i] + cos(-angles[i])*roadWidth/4)
-#    xUpper.append(x[i] + sin(-angles[i])*(roadWidth - roadWidth/4))
-#    xLower.append(x[i] - sin(-angles[i])*roadWidth/4)
-#    yUpper.append(y[i] + cos(-angles[i])*(roadWidth - roadWidth/4))
-#    yLower.append(y[i] - cos(-angles[i])*roadWidth/4)
-
 # Create plots to show the animation (top) and position on track (bottom)
 fig = plt.figure(figsize=(6, 8))
 axes = [fig.add_subplot(3, 1, 1)]
@@ -94,7 +70,6 @@ ax_simulation.fill_between(xUpper, yLower,yUpper, facecolor='black', interpolate
 ax_simulation.plot(xCenterLane, yCenterLane,'w--')
 ax_simulation.scatter(x,y,c=speedLimit, marker='*', s=4)
 
-#ax_simulation.scatter(x, y,c=speedLimit, marker='*', s=4)
 ax_vehicle.scatter(x,y,c=speedLimit, marker='*', s=4)
 
 ax_path.scatter(x,y,c=speedLimit, marker='*', s=4)
@@ -109,13 +84,8 @@ ax_vehicle.set_title('Measured data')
 ax_path.set_title('Path taken')
 plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=2.0)
 
-#ax_simulation.scatter(x, y, marker='*', s=4)
-#ax_vehicle.scatter(x,y, marker='*', s=4)
-#ax_path.scatter(x,y,marker='*', s=4)
-
 time_text = ax_simulation.text(0.02, 0.05, '', transform=ax_simulation.transAxes)
 
-#plt.show()
 
 # Create virtual vehicle (simulation)
 truck = BikeTrailer(theta = -pi/6.0, x_0 = x[0], y_0 = y[0], lengthTractor = 4.0, lengthTrailer = 10.0, tailDistance = 0.5)
@@ -125,7 +95,7 @@ truck.createPlot(fig, ax_simulation)
 truck.tractor.v = 0
 truck.tractor.phi = 0
 # Refresh rate of the simulation
-truck.plotRefreshRate = .1
+truck.plotRefreshRate = .05
 
 # Create the top layer of the autonomous vehicle
 sdv  = Vehicle(length = 4, fig = fig, ax = ax_vehicle)
@@ -177,6 +147,8 @@ RSE = 0
 linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
 tunnelCounter = 0
 while t < totalTime:
+
+#    Checking how the system would behave without gps inputs
 #    if(abs(t - 6) < dt/10):
 #        tunnelCounter = .5
 #        print('Tunnel!')
@@ -189,6 +161,11 @@ while t < totalTime:
     sdv.updateFilter(dt)
 
     omega = sdv.headingTracker(dt)
+#    phi = sdv.lqrTracker(dt)
+##   The LQR is currently defined to set phi, instead of omega
+#    truck.tractor.phi = phi
+#    omega = 0
+
 #    omega = sdv.phiController(dt)
 #    omega = sdv.cteController(dt)
 
@@ -196,6 +173,7 @@ while t < totalTime:
 
     sdv.engine.setValue(acc)
     sdv.steering.setValue(omega)
+
     RSE += ((sdv.planner.nextX - truck.tractor.x)**2 + (sdv.planner.nextY - truck.tractor.y)**2)**0.5
     truck.move(dt)
     if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):
