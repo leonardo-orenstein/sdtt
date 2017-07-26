@@ -19,11 +19,13 @@ class Body(object):
     mass and orientation
     '''
 
-    def __init__(self, orientation = 0, x = 0, y = 0, v = 0, vertex = None):
+    def __init__(self, orientation = 0, x = 0, y = 0, v = 0, acc = 0, omega = 0, vertex = None):
         self.x = x
         self.y = y
         self.orientation = orientation
         self.v   = v
+        self.acc = acc
+        self.omega = omega
 
         self.lastUpdate = 0
 
@@ -42,6 +44,19 @@ class Body(object):
         self.bodyLine = None
         self.directionArrow = None
 
+    @classmethod
+    def fromVehicle(cls, vehicle):
+        orientation = vehicle.getOrientation()
+        pos = vehicle.getPos()
+        vel = vehicle.getVelocity()
+        acc = vehicle.getAcc()
+        omega = vehicle.getOmega()
+
+        vertices = [(-vehicle.length/2 , -2),
+                    (-vehicle.length/2 , 2),
+                    (vehicle.length/2 , 2),
+                    (vehicle.length/2 , -2)]
+        return cls(orientation=orientation, x=pos[0], y=pos[1], v = vel, acc = acc, omega = omega, vertex = vertices)
 
     def setVertex(self, vertex):
         self.vertices = np.matrix(vertex)
@@ -80,8 +95,18 @@ class Body(object):
     def updateStates(self, t):
         dt = t - self.lastUpdate
 
-        self.v   += self.acc*dt
+        self.x += self.v*cos(self.orientation)
+        self.y += self.v*sin(self.orientation)
+        self.v += self.acc*dt
         self.orientation += self.omega*dt
+
+        self.lastUpdate = t
+
+    def setStates(self, x, y, v, orientation, t):
+        self.x = x
+        self.y = y
+        self.v = v
+        self.orientation = orientation
 
         self.lastUpdate = t
 
@@ -117,8 +142,8 @@ class Body(object):
                                      0.1*self.v*sin(self.orientation),
                                      color = 'c')
         self.ax.add_patch(self.directionArrow)
-        self.ax.set_xlim([-10, 10])
-        self.ax.set_ylim([-10, 10])
+        self.ax.set_xlim([self.x - 10, self.x + 10])
+        self.ax.set_ylim([self.y - 10, self.y + 10])
         self.ax.set_xlabel('Distance X')
         self.ax.set_ylabel('Distance Y')
 
@@ -143,27 +168,18 @@ class Body(object):
         return vX, vY
 
     def plot(self, draw = True):
-        self.tractorFront.set_ydata(self.tractor.y)
-        self.tractorFront.set_xdata(self.tractor.x)
-        self.tractorLine.set_ydata([self.tractor.y, self.trailer.y])
-        self.tractorLine.set_xdata([self.tractor.x, self.trailer.x])
+        (verticesX, verticesY) = self.getDrawingVertex()
+        self.bodyLine.set_ydata(verticesY)
+        self.bodyLine.set_xdata(verticesX)
+
         self.directionArrow.remove()
-        self.directionArrow = Arrow(self.tractor.x, self.tractor.y,
-                                              0.1*self.tractor.v*cos(self.tractor.orientation + self.tractor.phi),
-                                              0.1*self.tractor.v*sin(self.tractor.orientation + self.tractor.phi),
-                                              color = 'c')
+        self.directionArrow = Arrow(self.x, self.y,
+                                     0.1*self.v*cos(self.orientation),
+                                     0.1*self.v*sin(self.orientation),
+                                     color = 'c')
         self.ax.add_patch(self.directionArrow)
-
-        self.trailerFront.set_ydata(self.trailer.y)
-        self.trailerFront.set_xdata(self.trailer.x)
-
-        x_4 = self.trailer.x - (self.trailer.length + self.trailer.tailDistance)*cos(self.trailer.orientation)
-        y_4 = self.trailer.y - (self.trailer.length + self.trailer.tailDistance)*sin(self.trailer.orientation)
-        self.trailerLine.set_ydata([y_4, self.trailer.y])
-        self.trailerLine.set_xdata([x_4, self.trailer.x])
-
-        self.ax.set_xlim([self.trailer.x - 10, self.trailer.x + 10])
-        self.ax.set_ylim([self.trailer.y - 10, self.trailer.y + 10])
+        self.ax.set_xlim([self.x - 10, self.x + 10])
+        self.ax.set_ylim([self.y - 10, self.y + 10])
 
         if(draw):
             self.fig.canvas.draw()

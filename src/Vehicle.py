@@ -12,8 +12,9 @@ from Planner import Planner
 from Vizualizer import Vizualizer
 from ParticleFilter import ParticleFilter
 from SimulationVehicle import Bike
+from Body import Body
 
-class Vehicle(object):
+class Vehicle(Body):
     '''
     The overal Vehicle class pull together all other components
     '''
@@ -35,6 +36,22 @@ class Vehicle(object):
 
         self.maxLonAcc = 10
         self.particleFilter = None
+
+
+    def getPos(self):
+        return self.particleFilter.getPosition()
+
+    def getOrientation(self):
+        return self.compass.read()
+
+    def getVelocity(self):
+        return self.speedometer.read()
+
+    def getAcc(self):
+        return self.engine.getValue()
+
+    def getOmega(self):
+        return self.steering.getValue()
 
     def headingTracker(self, dt):
         '''

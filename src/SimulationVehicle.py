@@ -58,7 +58,8 @@ class SimulationVehicle(object):
         return np.random.normal(self.orientation, self.errorOrientation,1)
 
     def getVelocity(self):
-        return self.v*(1.0 + np.random.normal(0.0, self.errorVelocity,1)/100.0)
+        noise = np.random.normal(0.0, self.errorVelocity,1)/100.0
+        return self.v*(1.0 + noise)
 
 class Bike(SimulationVehicle):
     def __init__(self,
@@ -216,19 +217,20 @@ class BikeTrailer(object):
         else:
             self.ax = ax
 
-        self.tractorFront, = self.ax.plot(self.tractor.x, self.tractor.y, 'r*')
-        self.trailerFront, = self.ax.plot(self.trailer.x, self.trailer.y, 'm*')
-        self.tractorLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'k')
-        self.trailerLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'b')
+        self.tractorFront, = self.ax.plot(self.tractor.x, self.tractor.y, 'r*', label = 'Tractor Front')
+        self.tractorLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'k', label = 'Tractor Body')
+        self.trailerFront, = self.ax.plot(self.trailer.x, self.trailer.y, 'm*', label = 'Trailer Front')
+        self.trailerLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'b', label = 'Trailer Front')
         self.directionArrow = Arrow(self.tractor.x, self.tractor.y,
                                               0.1*self.tractor.v*cos(self.tractor.orientation + self.tractor.phi),
                                               0.1*self.tractor.v*sin(self.tractor.orientation + self.tractor.phi),
-                                              color = 'c')
+                                              color = 'c', label = 'Wheel Direction')
         self.ax.add_patch(self.directionArrow)
         self.ax.set_xlim([-10, 10])
         self.ax.set_ylim([-10, 10])
         self.ax.set_xlabel('Distance X')
         self.ax.set_ylabel('Distance Y')
+        self.ax.legend()
 
     def update_posture(self, X):
         l_1   = self.tractor.length
