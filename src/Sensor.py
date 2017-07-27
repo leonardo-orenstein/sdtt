@@ -37,7 +37,7 @@ class Sensor(object):
 
     def getUncertanty(self):
         if(self.proportionalUncertanty):
-            return abs(self.measure*self.uncertanty)
+            return max(0.01, abs(self.measure*self.uncertanty)) # setting a lower boundary for uncertanty
         else:
             return self.uncertanty
 

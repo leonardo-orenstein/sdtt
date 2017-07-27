@@ -10,10 +10,11 @@ from matplotlib.patches import Arrow
 from matplotlib.patches import Circle
 
 from Body import Body
+from LIDAR import LIDAR
 from math import sin, cos, tan, pi, exp, sqrt
 import numpy as np
 
-class Enviroment(object):
+class SimulationEnviroment(object):
     '''
     Creates a map of the vehicle and its surroding enviroment. This map is used
     by the planner to avoid collision.
@@ -21,55 +22,37 @@ class Enviroment(object):
     This might be expanded later with a SLAM.
     '''
 
-    def __init__(self, vehicle, mapRadius = 80):
+    def __init__(self, centerBody, mapRadius = 80):
         self.bodies = []
         self.mapRadius = mapRadius
-        self.vehicleBody = Body.fromVehicle(vehicle)
-        self.vehicle = vehicle
-        self.vehicleLine  = None
-        self.vehicleArrow = None
+        self.centerBody = centerBody
+        self.centerBodyLine  = None
+        self.centerBodyArrow = None
         self.radiusCircle = None
-        self.bodyLines  = [] # might be better changing this to a dict
+        self.bodyLines  = [] # might be better changin g this to a dict
         self.bodyArrows = [] # as to avoid having to keep bodies on track
+        self.lidarArray = []
+
+    def addLIDAR(self, lidar):
+        self.lidarArray.append(lidar)
 
     def addBody(self, body):
-        if(body not in self.bodies and self.vehicleBody.getDistance(body) <= self.mapRadius):
+        if(body not in self.bodies):
             self.bodies.append(body)
 
-    def updateEnviroment(self, t):
-        self.vehicleBody.updateStates(t)
-        updatedBodies = []
+    def update(self, t):
         for b in self.bodies:
             b.updateStates(t)
-            if(self.vehicleBody.getDistance(b) <= self.mapRadius):
-                updatedBodies.append(b)
-        self.bodies = updatedBodies
-        self.vehicleBody.updateStatesFromVehicle(self.vehicle, t)
 
-    def updateStates(self, t):
-        bodiesToRemove = []
-        for idx in range(len(self.bodies)):
-            body = self.bodies[idx]
-            body.updateStates(t)
-            if(self.vehicleBody.getDistance(body) > self.mapRadius):
-                bodiesToRemove.append(idx)
-
-        for removeIdx in bodiesToRemove:
-            del self.bodies[removeIdx]
-            self.bodyLines[removeIdx].remove()
-            del self.bodyLines[removeIdx]
-            self.bodyArrows[removeIdx].remove()
-            del self.bodyArrows[removeIdx]
-
-        orientation = self.vehicle.getOrientation()
-        pos = self.vehicle.getPos()
-        vel = self.vehicle.getVelocity()
-        acc = self.vehicle.getAcc()
-        omega = self.vehicle.getOmega()
-
-        self.vehicleBody.setStates(pos[0], pos[1], vel, orientation, t)
-        self.vehicleBody.setAcceleration(acc)
-        self.vehicleBody.setOmega(omega)
+#        prevPos = self.centerBody.getPosition()
+#        prevOrientation = self.centerBody.getOrientation()
+#        self.centerBody.updateStates(t)
+        pos = (self.centerBody.x, self.centerBody.y)
+#        delta_x, delta_y = (currPos[0] - prevPos[0], currPos[1] - prevPos[1])
+#        delta_theta = self.centerBody.getOrientation() - prevOrientation
+        for lidar in self.lidarArray:
+            lidar.setPose(pos, 0)
+#        self.centerBody.update(t)
 
     def createPlot(self, fig = None, ax = None):
         self.timeOfLastPlot = -1
@@ -95,23 +78,23 @@ class Enviroment(object):
             self.bodyArrows.append(directionArrow)
             self.ax.add_patch(directionArrow)
 
-        (verticesX, verticesY) = self.vehicleBody.getDrawingVertex()
-        self.vehicleLine, = self.ax.plot(verticesX, verticesY, 'r')
-        self.vehicleArrow = Arrow(self.vehicleBody.x, self.vehicleBody.y,
-                                     0.1*b.v*cos(self.vehicleBody.orientation),
-                                     0.1*b.v*sin(self.vehicleBody.orientation),
+        (verticesX, verticesY) = self.centerBody.getDrawingVertex()
+        self.centerBodyLine, = self.ax.plot(verticesX, verticesY, 'r')
+        self.centerBodyArrow = Arrow(self.centerBody.x, self.centerBody.y,
+                                     0.1*b.v*cos(self.centerBody.orientation),
+                                     0.1*b.v*sin(self.centerBody.orientation),
                                      color = 'c')
-        self.ax.add_patch(self.vehicleArrow)
+        self.ax.add_patch(self.centerBodyArrow)
 
-        self.radiusCircle = Circle((self.vehicleBody.x, self.vehicleBody.y),
+        self.radiusCircle = Circle((self.centerBody.x, self.centerBody.y),
                                      self.mapRadius,
                                      color = 'k',
                                      linestyle = ':',
                                      fill=False)
         self.ax.add_patch(self.radiusCircle)
 
-        self.ax.set_xlim([self.vehicleBody.x - self.mapRadius*1.1, self.vehicleBody.x + self.mapRadius*1.1])
-        self.ax.set_ylim([self.vehicleBody.y - self.mapRadius*1.1, self.vehicleBody.y + self.mapRadius*1.1])
+        self.ax.set_xlim([self.centerBody.x - self.mapRadius*1.1, self.centerBody.x + self.mapRadius*1.1])
+        self.ax.set_ylim([self.centerBody.y - self.mapRadius*1.1, self.centerBody.y + self.mapRadius*1.1])
         self.ax.set_xlabel('Distance X')
         self.ax.set_ylabel('Distance Y')
 
@@ -127,34 +110,159 @@ class Enviroment(object):
             directionArrow = self.bodyArrows[idx]
             directionArrow.remove()
 
-            directionArrow = Arrow(self.vehicleBody.x, self.vehicleBody.y,
-                                         0.1*b.v*cos(self.vehicleBody.orientation),
-                                         0.1*b.v*sin(self.vehicleBody.orientation),
+            directionArrow = Arrow(b.x, b.y,
+                                         0.1*b.v*cos(b.orientation),
+                                         0.1*b.v*sin(b.orientation),
                                          color = 'c')
             self.ax.add_patch(directionArrow)
             self.bodyArrows[idx] = directionArrow
 
-        (verticesX, verticesY) = self.vehicleBody.getDrawingVertex()
-        self.vehicleLine.set_ydata(verticesY)
-        self.vehicleLine.set_xdata(verticesX)
+        (verticesX, verticesY) = self.centerBody.getDrawingVertex()
+        self.centerBodyLine.set_ydata(verticesY)
+        self.centerBodyLine.set_xdata(verticesX)
 
-        self.vehicleArrow.remove()
-        self.vehicleArrow = Arrow(self.vehicleBody.x, self.vehicleBody.y,
-                                     0.1*self.vehicleBody.v*cos(self.vehicleBody.orientation),
-                                     0.1*self.vehicleBody.v*sin(self.vehicleBody.orientation),
+        self.centerBodyArrow.remove()
+        self.centerBodyArrow = Arrow(self.centerBody.x, self.centerBody.y,
+                                     0.1*self.centerBody.v*cos(self.centerBody.orientation),
+                                     0.1*self.centerBody.v*sin(self.centerBody.orientation),
                                      color = 'c')
+        self.ax.add_patch(self.centerBodyArrow)
 
         self.radiusCircle.remove()
-        self.radiusCircle = Circle((self.vehicleBody.x, self.vehicleBody.y),
+        self.radiusCircle = Circle((self.centerBody.x, self.centerBody.y),
                                      self.mapRadius,
                                      color = 'k',
                                      linestyle = ':',
                                      fill=False)
         self.ax.add_patch(self.radiusCircle)
 
-        self.ax.add_patch(self.vehicleArrow)
-        self.ax.set_xlim([self.vehicleBody.x - self.mapRadius*1.1, self.vehicleBody.x + self.mapRadius*1.1])
-        self.ax.set_ylim([self.vehicleBody.y - self.mapRadius*1.1, self.vehicleBody.y + self.mapRadius*1.1])
+        self.ax.set_xlim([self.centerBody.x - self.mapRadius*1.1, self.centerBody.x + self.mapRadius*1.1])
+        self.ax.set_ylim([self.centerBody.y - self.mapRadius*1.1, self.centerBody.y + self.mapRadius*1.1])
+
+
+        if(draw):
+            self.fig.canvas.draw()
+            plt.pause(0.001)
+
+class Enviroment(SimulationEnviroment):
+    '''
+    Creates a map of the vehicle and its surroding enviroment. This map is used
+    by the planner to avoid collision.
+
+    This might be expanded later with a SLAM.
+    '''
+
+    def __init__(self, vehicle, mapRadius = 80):
+        self.bodies = []
+        self.mapRadius = mapRadius
+        self.centerBody = Body.fromVehicle(vehicle)
+        self.centerBodyLine  = None
+        self.centerBodyArrow = None
+        self.vehicle = vehicle
+        self.radiusCircle = None
+        self.bodyLines  = [] # might be better changing this to a dict
+        self.bodyArrows = [] # as to avoid having to keep bodies on track
+
+    def addBody(self, body):
+        if(body not in self.bodies and self.centerBody.getDistance(body) <= self.mapRadius):
+            self.bodies.append(body)
+
+    def lidarScan(self):
+        for lidar in self.vehicle.lidarArray:
+            lidar.updateRays()
+            lidar.rayTracing(self.bodies)
+
+    def update(self, t):
+        bodiesToRemove = []
+        for idx in range(len(self.bodies)):
+            body = self.bodies[idx]
+            body.updateStates(t)
+            if(self.centerBody.getDistance(body) > self.mapRadius):
+                bodiesToRemove.append(idx)
+
+#        for removeIdx in bodiesToRemove:
+#            del self.bodies[removeIdx]
+
+        orientation = self.vehicle.getOrientation()
+        pos = self.vehicle.getPos()
+        vel = self.vehicle.getVelocity()
+        acc = self.vehicle.getAcc()
+        omega = self.vehicle.getOmega()
+
+        self.centerBody.setStates(pos[0], pos[1], vel, orientation, t)
+        self.centerBody.setAcceleration(acc)
+        self.centerBody.setOmega(omega)
+
+    def createPlot(self, fig = None, ax = None):
+        self.timeOfLastPlot = -1
+
+        if(fig is None):
+            self.fig = plt.figure()
+        else:
+            self.fig = fig
+
+        if(ax is None):
+            self.ax = self.fig.add_subplot(111)
+        else:
+            self.ax = ax
+
+        for lidar in self.vehicle.lidarArray:
+            pm = [pm.coords if pm is not None else None for pm in lidar.pointMap]
+            bodyLine, = self.ax.plot(pm, 'r-', linewidth=0.1)
+            self.bodyLines.append(bodyLine)
+
+        (verticesX, verticesY) = self.centerBody.getDrawingVertex()
+        self.centerBodyLine, = self.ax.plot(verticesX, verticesY, 'r')
+        self.centerBodyArrow = Arrow(self.centerBody.x, self.centerBody.y,
+                                     0.1*self.centerBody.v*cos(self.centerBody.orientation),
+                                     0.1*self.centerBody.v*sin(self.centerBody.orientation),
+                                     color = 'c')
+        self.ax.add_patch(self.centerBodyArrow)
+
+        self.radiusCircle = Circle((self.centerBody.x, self.centerBody.y),
+                                     self.mapRadius,
+                                     color = 'k',
+                                     linestyle = ':',
+                                     fill=False)
+        self.ax.add_patch(self.radiusCircle)
+
+        self.ax.set_xlim([self.centerBody.x - self.mapRadius*1.1, self.centerBody.x + self.mapRadius*1.1])
+        self.ax.set_ylim([self.centerBody.y - self.mapRadius*1.1, self.centerBody.y + self.mapRadius*1.1])
+        self.ax.set_xlabel('Distance X')
+        self.ax.set_ylabel('Distance Y')
+
+
+    def plot(self, draw = True):
+        for idx in range(len(self.vehicle.lidarArray)):
+            lidar = self.vehicle.lidarArray[idx]
+            pm_x = [(self.centerBody.x, pm.xy[0][0]) if pm is not None else None for pm in lidar.pointMap]
+            pm_y = [(self.centerBody.y, pm.xy[1][0]) if pm is not None else None for pm in lidar.pointMap]
+
+            bodyLine = self.bodyLines[idx]
+            bodyLine.set_ydata(pm_y)
+            bodyLine.set_xdata(pm_x)
+
+        (verticesX, verticesY) = self.centerBody.getDrawingVertex()
+        self.centerBodyLine.set_ydata(verticesY)
+        self.centerBodyLine.set_xdata(verticesX)
+
+        self.centerBodyArrow.remove()
+        self.centerBodyArrow = Arrow(self.centerBody.x, self.centerBody.y,
+                                     0.1*self.centerBody.v*cos(self.centerBody.orientation),
+                                     0.1*self.centerBody.v*sin(self.centerBody.orientation),
+                                     color = 'c')
+        self.ax.add_patch(self.centerBodyArrow)
+
+        self.radiusCircle.remove()
+        self.radiusCircle = Circle((self.centerBody.x, self.centerBody.y),
+                                     self.mapRadius,
+                                     color = 'k',
+                                     linestyle = ':',
+                                     fill=False)
+        self.ax.add_patch(self.radiusCircle)
+
+        self.ax.set_xlim([self.centerBody.x - self.mapRadius*1.1, self.centerBody.x + self.mapRadius*1.1])
+        self.ax.set_ylim([self.centerBody.y - self.mapRadius*1.1, self.centerBody.y + self.mapRadius*1.1])
 
 
         if(draw):

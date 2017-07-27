@@ -11,7 +11,9 @@ import numpy as np
 from matplotlib.patches import Arrow
 import sys
 
-class SimulationVehicle(object):
+from Body import Body
+
+class SimulationVehicle(Body):
     '''
     The simulation class has the dynamics of the vehicle for simulation
     '''
@@ -39,14 +41,6 @@ class SimulationVehicle(object):
 
     def setOmega(self, omega):
         self.omega= omega
-
-    def updateStates(self, t):
-        dt = t - self.lastUpdate
-
-        self.v   += self.acc*dt
-        self.phi += self.omega*dt
-
-        self.lastUpdate = t
 
     def resetTime(self):
         self.lastUpdate = 0.0
@@ -78,6 +72,11 @@ class Bike(SimulationVehicle):
         self.errorPhi = 0.0 # in radians
 
         self.tailDistance = tailDistance
+
+        self.vertices = np.matrix([(-length/2 , -2),
+                        (-length/2 , 2),
+                        (length/2 , 2),
+                        (length/2 , -2)])
 
     def duplicate(self):
         newBike= Bike(self.orientation, self.x, self.y,
@@ -204,34 +203,6 @@ class BikeTrailer(object):
         self.tractor.setNoise(errorPos, errorPhi, errorOrientation, errorVelocity)
         self.trailer.setNoise(errorPos, errorPhi, errorOrientation, errorVelocity)
 
-    def createPlot(self, fig = None, ax = None):
-        self.timeOfLastPlot = -1
-
-        if(fig is None):
-            self.fig = plt.figure()
-        else:
-            self.fig = fig
-
-        if(ax is None):
-            self.ax = self.fig.add_subplot(111)
-        else:
-            self.ax = ax
-
-        self.tractorFront, = self.ax.plot(self.tractor.x, self.tractor.y, 'r*', label = 'Tractor Front')
-        self.tractorLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'k', label = 'Tractor Body')
-        self.trailerFront, = self.ax.plot(self.trailer.x, self.trailer.y, 'm*', label = 'Trailer Front')
-        self.trailerLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'b', label = 'Trailer Front')
-        self.directionArrow = Arrow(self.tractor.x, self.tractor.y,
-                                              0.1*self.tractor.v*cos(self.tractor.orientation + self.tractor.phi),
-                                              0.1*self.tractor.v*sin(self.tractor.orientation + self.tractor.phi),
-                                              color = 'c', label = 'Wheel Direction')
-        self.ax.add_patch(self.directionArrow)
-        self.ax.set_xlim([-10, 10])
-        self.ax.set_ylim([-10, 10])
-        self.ax.set_xlabel('Distance X')
-        self.ax.set_ylabel('Distance Y')
-        self.ax.legend()
-
     def update_posture(self, X):
         l_1   = self.tractor.length
         l_off = self.tractor.tailDistance
@@ -262,6 +233,9 @@ class BikeTrailer(object):
         self.update_posture(X[-1])
 
         return X
+
+    def update(self, finalTime):
+        self.move(finalTime)
 
     def diff(self, X, t):
         delta_1 = X[2]
@@ -333,6 +307,35 @@ class BikeTrailer(object):
             print 'angle'
             print self.tractor.cruiseControl.phi
     '''
+
+    def createPlot(self, fig = None, ax = None):
+        self.timeOfLastPlot = -1
+
+        if(fig is None):
+            self.fig = plt.figure()
+        else:
+            self.fig = fig
+
+        if(ax is None):
+            self.ax = self.fig.add_subplot(111)
+        else:
+            self.ax = ax
+
+        self.tractorFront, = self.ax.plot(self.tractor.x, self.tractor.y, 'r*', label = 'Tractor Front')
+        self.tractorLine, = self.ax.plot([self.tractor.x, self.trailer.x], [self.tractor.y, self.trailer.y], 'k', label = 'Tractor Body')
+        self.trailerFront, = self.ax.plot(self.trailer.x, self.trailer.y, 'm*', label = 'Trailer Front')
+        self.trailerLine, = self.ax.plot([self.trailer.x, self.trailer.x - self.trailer.length*cos(self.trailer.length)], [self.trailer.y, self.trailer.y - self.trailer.length*sin(self.trailer.length)], 'b', label = 'Trailer Body')
+        self.directionArrow = Arrow(self.tractor.x, self.tractor.y,
+                                              0.1*self.tractor.v*cos(self.tractor.orientation + self.tractor.phi),
+                                              0.1*self.tractor.v*sin(self.tractor.orientation + self.tractor.phi),
+                                              color = 'c', label = 'Wheel Direction')
+        self.ax.add_patch(self.directionArrow)
+        self.ax.set_xlim([-10, 10])
+        self.ax.set_ylim([-10, 10])
+        self.ax.set_xlabel('Distance X')
+        self.ax.set_ylabel('Distance Y')
+        self.ax.legend()
+
     def plot(self, draw = True):
         self.tractorFront.set_ydata(self.tractor.y)
         self.tractorFront.set_xdata(self.tractor.x)

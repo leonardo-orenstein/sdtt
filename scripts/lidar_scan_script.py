@@ -9,11 +9,11 @@ import sys
 sys.path.append('../')
 
 from src.Body import Body
-from src.Enviroment import Enviroment
+from src.Enviroment import Enviroment, SimulationEnviroment
 from src.Vehicle import Vehicle
 from src.SimulationVehicle import BikeTrailer
 from src import Track
-from src import LIDAR
+from src.LIDAR import LIDAR
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,17 +50,19 @@ yCenterLane = track.yCenterLane
 
 # Create plots to show the animation (top) and position on track (bottom)
 fig = plt.figure(figsize=(6, 8))
-axes = [fig.add_subplot(3, 1, 1)]
+axes = [fig.add_subplot(4, 1, 1)]
 
 # The bottom independent axes
-axes.append(fig.add_subplot(3, 2, 3))
-axes.append(fig.add_subplot(3, 2, 4))
-axes.append(fig.add_subplot(3, 1, 3))
+axes.append(fig.add_subplot(4, 1, 2))
+axes.append(fig.add_subplot(4, 2, 5))
+axes.append(fig.add_subplot(4, 2, 6))
+axes.append(fig.add_subplot(4, 1, 4))
 
 ax_simulation =  axes[0]
 ax_vehicle = axes[1]
-ax_env = axes[2]
-ax_path = axes[3]
+ax_simul_env = axes[2]
+ax_env = axes[3]
+ax_path = axes[4]
 
 ax_simulation.plot(xUpper, yUpper, 'k-')
 ax_simulation.plot(xLower, yLower, 'k-')
@@ -80,7 +82,8 @@ ax_path.plot(xLower, yLower, 'k-')
 
 ax_simulation.set_title('Simulation')
 ax_vehicle.set_title('Measured data')
-ax_env.set_title('Enviroment')
+ax_simul_env.set_title('Simul Enviroment')
+ax_env.set_title('LIDAR')
 ax_path.set_title('Path taken')
 plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=2.0)
 
@@ -129,31 +132,40 @@ sdv.steering.setValue(0.0)
 
 # creates an eviroment with 3 bodies
 vertices = [(-2,-2), (2,-2), (1,1),(-1,1)]
-x, y = sdv.getPos()
-b1 = Body(orientation= 0, x = x-10, y = y, v = .1, acc = 0, omega = 0.1, vertex= vertices)
-b2 = Body(orientation= pi/2, x = x+10, y = y+10, v = .2, acc = 0, omega = 0.1, vertex= vertices)
-b3 = Body(orientation= pi/2, x = x+10, y = y-10, v = .1, acc = 0, omega = 0.1, vertex= vertices)
+cbVertices = [(-2,-2), (2,-2), (2,2),(-2,2)]
+x, y = truck.tractor.x, truck.tractor.y
 
+b1 = Body(orientation= 0., x = x-10., y = y, v = .1, acc = 0., omega = 0.1, vertex= vertices)
+b2 = Body(orientation= pi/2, x = x+10., y = y+10., v = .2, acc = 0., omega = 0.1, vertex= vertices)
+b3 = Body(orientation= pi/4, x = x+10., y = y-10., v = .2, acc = 0., omega = 0.2, vertex= vertices)
+b4 = Body(orientation= pi/2, x = x+np.random.rand()*10., y = y+np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+b5 = Body(orientation= pi/2, x = x+np.random.rand()*10., y = y-np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+b6 = Body(orientation= pi/2, x = x-np.random.rand()*10., y = y+np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+b7 = Body(orientation= pi/2, x = x-np.random.rand()*10., y = y-np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+
+lidar = LIDAR(truck.tractor.x, truck.tractor.y, 2., 80.)
+sdv.addLIDAR(lidar)
+
+simul_env = SimulationEnviroment(truck.tractor)
 env = Enviroment(sdv)
-lidar = LIDAR(0, 0, 1)
-env.addBody(b1)
-env.addBody(b2)
-env.addBody(b3)
-env.addLidar(lidar)
+
+simul_env.addBody(b1)
+simul_env.addBody(b2)
+simul_env.addBody(b3)
+simul_env.addLIDAR(lidar)
+#simul_env.addBody(b4)
+#simul_env.addBody(b5)
+#simul_env.addBody(b6)
+#simul_env.addBody(b7)
 
 env.createPlot(fig = fig, ax=ax_env)
+simul_env.createPlot(fig = fig, ax=ax_simul_env)
+
+#env.createPlot()
+#simul_env.createPlot()
 
 # simulation loop
 start = timeit.default_timer()
-
-# starts the system and acquire first positions
-for _ in range(int(1/dt)):
-    sdv.scan()
-    sdv.updateFilter(dt)
-    truck.move(dt)
-    time_text.set_text('Initializing systems')
-    truck.plot(False)
-    sdv.plot(False)
 
 # Total time of the simulation
 totalTime = 9
@@ -162,6 +174,8 @@ linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
 while t < totalTime:
 
     sdv.scan()
+    sdv.lidarScan(simul_env)
+
 #    sdv.updateFilter(dt)
 
     omega = sdv.headingTracker(dt)
@@ -173,12 +187,15 @@ while t < totalTime:
     sdv.steering.setValue(omega)
 
     truck.move(dt)
-    env.updateStates(t)
+    simul_env.update(t)
+    env.update(t)
 
     if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):
+
+        env.plot(False)
+        simul_env.plot(False)
         truck.plot(False)
-        sdv.plot(False)
-        env.plot()
+        sdv.plot(True)
         time_text.set_text('time = %.1f' % t )
         linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
         linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))

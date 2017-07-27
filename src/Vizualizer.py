@@ -45,12 +45,12 @@ class Vizualizer(object):
         self.body.set_ydata([y, y - sin(orientation)*length])
         self.body.set_xdata([x, x - cos(orientation)*length])
 
-#        self.ax.set_xlim([x - 50, x + 50])
-#        self.ax.set_ylim([y - 50, y + 50])
+        self.ax.set_xlim([x - 50, x + 50])
+        self.ax.set_ylim([y - 50, y + 50])
 
         if(draw):
             self.fig.canvas.draw()
-            plt.pause(0.001)
+            plt.pause(0.00001)
 
     def plot3d(self, x, y, orientation):
         self.body3d.pos  = vector(x,y,0)

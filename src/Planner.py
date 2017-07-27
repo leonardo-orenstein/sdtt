@@ -32,7 +32,7 @@ class Planner(object):
         self.lastUpdate = 0
 
 		  # Parameters for the algorithms
-        self.pathUpdateLookAhead = .2
+        self.pathUpdateLookAhead = .05
         self.minPathUpdateDistance = 2
         self.headingWindow = 0
 

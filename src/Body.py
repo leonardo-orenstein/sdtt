@@ -19,7 +19,7 @@ class Body(object):
     mass and orientation
     '''
 
-    def __init__(self, orientation = 0, x = 0, y = 0, v = 0, acc = 0, omega = 0, vertex = None):
+    def __init__(self, orientation = 0.0, x = 0.0, y = 0.0, v = 0.0, acc = 0.0, omega = 0.0 , vertex = None):
         self.x = x
         self.y = y
         self.orientation = orientation
@@ -27,7 +27,7 @@ class Body(object):
         self.acc = acc
         self.omega = omega
 
-        self.lastUpdate = 0
+        self.lastUpdate = 0.0
 
         if vertex is None:
             self.vertices = np.matrix([0,0])
@@ -82,6 +82,12 @@ class Body(object):
     def checkLineCollision(self, line):
         polygonSelf = Polygon(self.getPose())
         return polygonSelf.intersects(line)
+
+    def getPolygon(self):
+        return Polygon(self.getPose())
+
+    def getOrigin(self):
+        return Point(self.x, self.y)
 
     def getDistance(self, body):
         return sqrt((self.x - body.x)**2 + (self.y- body.y)**2)

@@ -204,21 +204,20 @@ class Pilot(object):
 
         K, _, _ = LQR.lqr(A,B,Q,R)
 
-        u = K*X
-        u = u[0,0]
+        u_phi = K*X
+        u_phi = u_phi[0,0]
 
+        # setting u_phi between -pi and pi.
         # not really necessary here, but it does make the whole thing better to
         # understand
-        u = u % (2*pi)
+        u_phi = u_phi % (2*pi)
 
-        if(u > pi):
-            u -= 2*pi
+        if(u_phi > pi):
+            u_phi -= 2*pi
 
-#        print X
-#        print K
-#        print u
-#        print '///'
-
+        # since the input for the vehicle is omega, not a pretty simple control
+        # law between omega and phi
+        u = (u_phi - phi)*self.K_p_phi
         return u
 
 

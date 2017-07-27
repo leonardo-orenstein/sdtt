@@ -14,6 +14,8 @@ from ParticleFilter import ParticleFilter
 from SimulationVehicle import Bike
 from Body import Body
 
+from math import cos, sin
+
 class Vehicle(Body):
     '''
     The overal Vehicle class pull together all other components
@@ -27,6 +29,7 @@ class Vehicle(Body):
         self.gps = Sensor()
         self.compass = Sensor()
         self.laneTracker = Sensor()
+        self.lidarArray = []
 
         self.pilot = Pilot()
         self.planner = Planner()
@@ -39,7 +42,10 @@ class Vehicle(Body):
 
 
     def getPos(self):
-        return self.particleFilter.getPosition()
+#        return self.particleFilter.getPosition()
+        x, y = self.gps.read()
+        return x[0], y[0]
+
 
     def getOrientation(self):
         return self.compass.read()
@@ -57,13 +63,17 @@ class Vehicle(Body):
         '''
         Wrapper for the heading controller
         '''
-#        x, y        = self.gps.read()
-        x, y        = self.particleFilter.getPosition()
+        x, y        = self.gps.read()
+#        x, y        = self.particleFilter.getPosition()
         orientation = self.compass.read()
         phi         = self.wheelAngle.read()
         v           = self.speedometer.read()
-        x_road, y_road, angle_road, v_d = self.planner.getGoal(x, y, v, dt)
+#        x_road, y_road, angle_road, v_d = self.planner.getGoal(x, y, v, dt)
+        x_road, y_road, angle_road, v_d = self.planner.getPath(x, y)
+        x_road, y_road, angle_road, v_d = self.planner.getPath(x[0], y[0])
 
+        x_road += cos(angle_road)*v_d*dt*10
+        y_road += sin(angle_road)*v_d*dt*10
         return self.pilot.headingTracker(x, y, orientation,
                                            phi, v, self.length,
                                            x_road, y_road, angle_road, v_d,
@@ -74,8 +84,7 @@ class Vehicle(Body):
         Wrapper for the heading controller
         '''
         x, y        = self.gps.read()
-        # The particle filter is currently not working with the LQT as it's
-        # using omega, instead of phi, as an input.
+#
 #        x, y        = self.particleFilter.getPosition()
         orientation = self.compass.read()
         phi         = self.wheelAngle.read()
@@ -122,6 +131,13 @@ class Vehicle(Body):
 
         return self.pilot.velocityController(v, v_ref, self.maxLonAcc, histeresis = 0.1)
 
+    def addLIDAR(self, lidar):
+        self.lidarArray.append(lidar)
+
+    def lidarScan(self, env):
+        for lidar in self.lidarArray:
+            lidar.updateRays()
+            lidar.rayTracing(env.bodies)
 
     def connectToEngine(self, function):
         '''
@@ -193,7 +209,7 @@ class Vehicle(Body):
         orientationHat  = self.compass.read()
         phiHat          = self.wheelAngle.read()
         vHat            = self.speedometer.read()
-        self.particleFilter = ParticleFilter(Bike, xHat, yHat, orientationHat, phiHat, vHat, self.length,  200)
+        self.particleFilter = ParticleFilter(Bike, xHat, yHat, orientationHat, phiHat, vHat, self.length,  500)
 
     def updateFilter(self, dt):
         xHat, yHat      = self.gps.read()
@@ -205,13 +221,16 @@ class Vehicle(Body):
         acc             = self.engine.getValue()
         omega           = self.steering.getValue()
 
-#        measurements = [ xHat, yHat, orientationHat, phiHat, vHat]
-#        V = [self.gps.getUncertanty(), self.gps.getUncertanty(), self.compass.getUncertanty(), self.wheelAngle.getUncertanty(), self.speedometer.getUncertanty()]
+        measurements = [ xHat, yHat, orientationHat, phiHat, vHat]
+        V = [self.gps.getUncertanty(),
+             self.gps.getUncertanty(),
+             self.compass.getUncertanty(),
+             self.wheelAngle.getUncertanty(),
+             self.speedometer.getUncertanty()]
+#        measurements = [ xHat, yHat]
+#        V = [self.gps.getUncertanty(), self.gps.getUncertanty()]
 
         self.particleFilter.updateParticles(acc, omega, dt)
-
-        measurements = [ xHat, yHat]
-        V = [self.gps.getUncertanty(), self.gps.getUncertanty()]
         self.particleFilter.weightParticles(measurements, V)
         self.particleFilter.resampleParticles()
 
