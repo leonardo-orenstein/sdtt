@@ -7,7 +7,7 @@ Created on Wed Jul 26 16:33:02 2017
 
 import numpy as np
 
-from math import cos, sin, atan, pi
+from math import cos, sin, atan2, atan, pi, asin
 
 from shapely.geometry import Polygon
 from shapely.geometry import Point, LineString, mapping, shape
@@ -48,6 +48,126 @@ class LIDAR(object):
             self.rays[idx] = LineString([self.origin, endPoint])
 
     def rayTracing(self, bodies):
+
+        closeBodies = []
+        for body in bodies:
+            if self.origin.distance(body.getOrigin()) <= self.mapRadius + body.radius:
+                closeBodies.append(body)
+
+        self.measure = np.repeat(self.mapRadius,self.nRays)
+        self.pointMap = [r.boundary[1] for r in self.rays]
+
+        for body in closeBodies:
+            d = self.origin.distance(body.getOrigin())
+            if(d > body.radius):
+                alpha = asin(body.radius/d)
+                midAngle = atan2(body.y - self.y, body.x - self.x)
+                if(midAngle < 0):
+                    midAngle += 2*pi
+                iAngle = midAngle - alpha
+                fAngle = midAngle + alpha
+
+                if(fAngle > 2*pi):
+                    fAngle -= 2*pi
+                if(iAngle < 0):
+                   iAngle += 2*pi
+
+                infeasibleAngles = np.where(self.angles>fAngle)[0]
+                if(len(infeasibleAngles) > 0):
+                    lastRayIdx = infeasibleAngles[0]
+                else:
+                    lastRayIdx = 0
+
+                infeasibleAngles = np.where(self.angles<iAngle)[0]
+                if(len(infeasibleAngles) > 0):
+                    idx = infeasibleAngles[-1]
+                else:
+                    idx = self.nRays
+
+
+                if(idx > lastRayIdx ):
+                    idx = idx - self.nRays
+
+            else:
+                idx = 0
+                lastRayIdx = self.nRays
+
+            poly = body.getPolygon()
+            while idx < lastRayIdx:
+                ray = self.rays[idx]
+                distance = self.mapRadius
+                inter = poly.intersection(ray)
+
+                if inter.is_empty:
+                   # radial line doesn't intersect, so skip
+                   idx += 1
+                   continue
+
+                if len(inter.coords) > 1:
+                   # ray intersects at multiple points
+                   inter_dict = {}
+                   for p in inter.boundary:
+                       inter_dict[self.origin.distance(p)] = p
+                   distance = min(inter_dict.keys())
+                   intersect = inter_dict[distance]
+                else:
+                   # ray intersects at one point only
+                   distance  = self.origin.distance(inter)
+                   intersect = inter
+
+                if(self.measure[idx] > distance):
+                    self.measure[idx] = distance
+                    self.pointMap[idx] = intersect
+                idx += 1
+#
+#        closeBodies = []
+#        for body in bodies:
+#            if self.origin.distance(body.getOrigin()) <= self.mapRadius + body.radius:
+#                closeBodies.append(body)
+#
+#        self.measure = np.repeat(self.mapRadius,self.nRays)
+#        self.pointMap = [r.boundary[1] for r in self.rays]
+#
+#        for body in closeBodies:
+#            lastRayIdx = self.nRays
+#            idx = 0
+#            bodyNotFound = True
+#            poly = body.getPolygon()
+#            while idx < lastRayIdx:
+#                ray = self.rays[idx]
+#                distance = self.mapRadius
+#                inter = poly.intersection(ray)
+#
+#                if inter.is_empty:
+#                   # radial line doesn't intersect, so skip
+#                   idx += 1
+#                   continue
+#
+#                if len(inter.coords) > 1:
+#                   # ray intersects at multiple points
+#                   inter_dict = {}
+#                   for p in inter.boundary:
+#                       inter_dict[self.origin.distance(p)] = p
+#                   distance = min(inter_dict.keys())
+#                   intersect = inter_dict[distance]
+#                else:
+#                   # ray intersects at one point only
+#                   distance  = self.origin.distance(inter)
+#                   intersect = inter
+#
+#                if(distance < self.mapRadius and bodyNotFound == True):
+#                    # it's the first sign of this body. Let's limit the scan
+#                    if(distance > body.radius):
+#                        alpha = atan((2.*body.radius)/distance) #angle left for scanning
+#                        lastRayIdx = min(lastRayIdx, idx + int(alpha/self.resolution))
+#                    bodyNotFound = False
+#
+#                if(self.measure[idx] > distance):
+#                    self.measure[idx] = distance
+#                    self.pointMap[idx] = intersect
+#                idx += 1
+#
+#
 #
 #        polys = [b.getPolygon() for b in bodies]
 #        radial_sweep = cascaded_union(self.rays)
@@ -84,50 +204,3 @@ class LIDAR(object):
 #            if(self.measure[idx] > distance):
 #                self.measure[idx] = distance
 #                self.pointMap[idx] = intersect
-#
-        closeBodies = []
-        for body in bodies:
-            if self.origin.distance(body.getOrigin()) <= self.mapRadius + body.radius:
-                closeBodies.append(body)
-
-        self.measure = np.repeat(self.mapRadius,self.nRays)
-        self.pointMap = [r.boundary[1] for r in self.rays]
-
-        for body in closeBodies:
-            lastRayIdx = self.nRays
-            idx = 0
-            bodyNotFound = True
-            poly = body.getPolygon()
-            while idx < lastRayIdx:
-                ray = self.rays[idx]
-                distance = self.mapRadius
-                inter = poly.intersection(ray)
-
-                if inter.is_empty:
-                   # radial line doesn't intersect, so skip
-                   idx += 1
-                   continue
-
-                if len(inter.coords) > 1:
-                   # ray intersects at multiple points
-                   inter_dict = {}
-                   for p in inter.boundary:
-                       inter_dict[self.origin.distance(p)] = p
-                   distance = min(inter_dict.keys())
-                   intersect = inter_dict[distance]
-                else:
-                   # ray intersects at one point only
-                   distance  = self.origin.distance(inter)
-                   intersect = inter
-
-                if(distance < self.mapRadius and bodyNotFound == True):
-                    # it's the first sign of this body. Let's limit the scan
-                    if(distance > body.radius):
-                        alpha = atan((2.*body.radius)/distance) #angle left for scanning
-                        lastRayIdx = min(lastRayIdx, idx + int(alpha/self.resolution))
-                    bodyNotFound = False
-
-                if(self.measure[idx] > distance):
-                    self.measure[idx] = distance
-                    self.pointMap[idx] = intersect
-                idx += 1

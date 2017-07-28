@@ -13,7 +13,6 @@ from src.Enviroment import Enviroment
 from src.Vehicle import Vehicle
 from src.SimulationVehicle import BikeTrailer
 from src import Track
-from src import LIDAR
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -135,11 +134,9 @@ b2 = Body(orientation= pi/2, x = x+10, y = y+10, v = .2, acc = 0, omega = 0.1, v
 b3 = Body(orientation= pi/2, x = x+10, y = y-10, v = .1, acc = 0, omega = 0.1, vertex= vertices)
 
 env = Enviroment(sdv)
-lidar = LIDAR(0, 0, 1)
 env.addBody(b1)
 env.addBody(b2)
 env.addBody(b3)
-env.addLidar(lidar)
 
 env.createPlot(fig = fig, ax=ax_env)
 

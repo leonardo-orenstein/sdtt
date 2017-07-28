@@ -29,6 +29,7 @@ class Vehicle(Body):
         self.gps = Sensor()
         self.compass = Sensor()
         self.laneTracker = Sensor()
+        self.lidar = Sensor()
         self.lidarArray = []
 
         self.pilot = Pilot()
@@ -101,8 +102,8 @@ class Vehicle(Body):
         '''
         Wrapper for the phi controller
         '''
-#        x, y        = self.gps.read()
-        x, y        = self.particleFilter.getPosition()
+        x, y        = self.gps.read()
+#        x, y        = self.particleFilter.getPosition()
         orientation = self.compass.read()
         phi         = self.wheelAngle.read()
         v           = self.speedometer.read()
@@ -116,8 +117,8 @@ class Vehicle(Body):
         '''
         Wrapper for the Cross Track Error controller
         '''
-#        x, y        = self.gps.read()
-        x, y        = self.particleFilter.getPosition()
+        x, y        = self.gps.read()
+#        x, y        = self.particleFilter.getPosition()
         return self.pilot.crossTrackErrorController(x, y, self.planner, dt)
 
     def velocityController(self, dt):
@@ -125,19 +126,14 @@ class Vehicle(Body):
         Wrapper for the velocity controller
         '''
         x, y        = self.gps.read()
-        x, y        = self.particleFilter.getPosition()
+#        x, y        = self.particleFilter.getPosition()
         v               = self.speedometer.read()
-        _, _, _, v_ref  = self.planner.getGoal(x, y, v, dt)
+#        _, _, _, v_ref  = self.planner.getGoal(x, y, v, dt)
+        x_road, y_road, angle_road, v_d = self.planner.getPath(x[0], y[0])
+        return self.pilot.velocityController(v, v_d, self.maxLonAcc, histeresis = 0.1)
 
-        return self.pilot.velocityController(v, v_ref, self.maxLonAcc, histeresis = 0.1)
-
-    def addLIDAR(self, lidar):
-        self.lidarArray.append(lidar)
-
-    def lidarScan(self, env):
-        for lidar in self.lidarArray:
-            lidar.updateRays()
-            lidar.rayTracing(env.bodies)
+#    def addLIDAR(self, lidar):
+#        self.lidarArray.append(lidar)
 
     def connectToEngine(self, function):
         '''
@@ -175,13 +171,19 @@ class Vehicle(Body):
         '''
         self.compass.connect(function)
 
+    def connectToLidar(self, function):
+        '''
+        Adds a connection to system that captures the enviroment
+        '''
+        self.lidar.connect(function)
+
     def connectToLaneTracker(self, function):
         '''
         Adds a connection to system that captures the vehicle orientation
         '''
         self.laneTracker.connect(function)
 
-    def connectToSimulation(self, simulationVehicle, laneTracker):
+    def connectToSimulation(self, simulationVehicle, laneTracker, simulationEnviroment = None):
         '''
         Wrapper to connect all system to simulation model
         '''
@@ -192,6 +194,10 @@ class Vehicle(Body):
         self.connectToSpeedometer(simulationVehicle.getVelocity)
         self.connectToGPS(simulationVehicle.getPosition)
         self.connectToWheelAngle(simulationVehicle.getSteering)
+        if(simulationEnviroment is not None):
+            self.connectToLidar(simulationEnviroment.getPointMap)
+        else:
+            self.connectToLidar(lambda : 0)
         self.connectToLaneTracker(laneTracker)
 
     def scan(self):
@@ -203,6 +209,7 @@ class Vehicle(Body):
         self.gps.scan()
         self.wheelAngle.scan()
         self.laneTracker.scan()
+        self.lidar.scan()
 
     def createFilter(self):
         xHat, yHat      = self.gps.read()

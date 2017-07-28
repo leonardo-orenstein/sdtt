@@ -99,6 +99,32 @@ truck.tractor.phi = 0
 # Refresh rate of the simulation
 truck.plotRefreshRate = .05
 
+# creates an eviroment with 3 bodies
+vertices = [(-2,-2), (2,-2), (1,1),(-1,1)]
+cbVertices = [(-2,-2), (2,-2), (2,2),(-2,2)]
+x_truck, y_truck = truck.tractor.x, truck.tractor.y
+
+b1 = Body(orientation= 0., x = x_truck - 10., y = y_truck, v = .1, acc = 0., omega = 0.1, vertex= vertices)
+b2 = Body(orientation= pi/2, x = x_truck + 10., y = y_truck +10., v = .2, acc = 0., omega = 0.1, vertex= vertices)
+b3 = Body(orientation= pi/4, x = x_truck + 10., y = y_truck -10., v = .2, acc = 0., omega = 0.2, vertex= vertices)
+b4 = Body(orientation= pi/2, x = x_truck + np.random.rand()*10., y = y_truck + np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+b5 = Body(orientation= pi/2, x = x_truck + np.random.rand()*10., y = y_truck - np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+b6 = Body(orientation= pi/2, x = x_truck - np.random.rand()*10., y = y_truck + np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+b7 = Body(orientation= pi/2, x = x_truck - np.random.rand()*10., y = y_truck - np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
+
+lidar = LIDAR(truck.tractor.x, truck.tractor.y, 1., 80.)
+
+simul_env = SimulationEnviroment(truck.tractor)
+
+simul_env.addLIDAR(lidar)
+#simul_env.addBody(b1)
+#simul_env.addBody(b2)
+simul_env.addBody(b3)
+#simul_env.addBody(b4)
+#simul_env.addBody(b5)
+#simul_env.addBody(b6)
+#simul_env.addBody(b7)
+
 # Create the top layer of the autonomous vehicle
 sdv  = Vehicle(length = 4, fig = fig, ax = ax_vehicle)
 
@@ -113,7 +139,7 @@ def laneTracker():
     return truck.tractor.x, truck.tractor.y
 
 # connect the autonomous vehcile system to the 'physical' system
-sdv.connectToSimulation(truck.tractor, laneTracker)
+sdv.connectToSimulation(truck.tractor, laneTracker, simul_env)
 sdv.compass.setUncertanty(2.0*pi/180.0)
 sdv.wheelAngle.setUncertanty(1.0*pi/180.0)
 sdv.speedometer.setUncertanty(5.0, True)
@@ -123,6 +149,9 @@ sdv.laneTracker.setUncertanty(.1)
 # First scan to get an initial position
 sdv.scan()
 
+# Builds an enviroment to keep track of it's surrodings
+env = Enviroment(sdv)
+
 # create the particle filter
 sdv.createFilter()
 
@@ -130,39 +159,8 @@ sdv.createFilter()
 sdv.engine.setValue(0.0)
 sdv.steering.setValue(0.0)
 
-# creates an eviroment with 3 bodies
-vertices = [(-2,-2), (2,-2), (1,1),(-1,1)]
-cbVertices = [(-2,-2), (2,-2), (2,2),(-2,2)]
-x, y = truck.tractor.x, truck.tractor.y
-
-b1 = Body(orientation= 0., x = x-10., y = y, v = .1, acc = 0., omega = 0.1, vertex= vertices)
-b2 = Body(orientation= pi/2, x = x+10., y = y+10., v = .2, acc = 0., omega = 0.1, vertex= vertices)
-b3 = Body(orientation= pi/4, x = x+10., y = y-10., v = .2, acc = 0., omega = 0.2, vertex= vertices)
-b4 = Body(orientation= pi/2, x = x+np.random.rand()*10., y = y+np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
-b5 = Body(orientation= pi/2, x = x+np.random.rand()*10., y = y-np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
-b6 = Body(orientation= pi/2, x = x-np.random.rand()*10., y = y+np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
-b7 = Body(orientation= pi/2, x = x-np.random.rand()*10., y = y-np.random.rand()*10., v = np.random.rand(), acc = 0., omega = 0.1, vertex= vertices)
-
-lidar = LIDAR(truck.tractor.x, truck.tractor.y, 2., 80.)
-sdv.addLIDAR(lidar)
-
-simul_env = SimulationEnviroment(truck.tractor)
-env = Enviroment(sdv)
-
-simul_env.addBody(b1)
-simul_env.addBody(b2)
-simul_env.addBody(b3)
-simul_env.addLIDAR(lidar)
-#simul_env.addBody(b4)
-#simul_env.addBody(b5)
-#simul_env.addBody(b6)
-#simul_env.addBody(b7)
-
 env.createPlot(fig = fig, ax=ax_env)
 simul_env.createPlot(fig = fig, ax=ax_simul_env)
-
-#env.createPlot()
-#simul_env.createPlot()
 
 # simulation loop
 start = timeit.default_timer()
@@ -174,7 +172,6 @@ linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
 while t < totalTime:
 
     sdv.scan()
-    sdv.lidarScan(simul_env)
 
 #    sdv.updateFilter(dt)
 

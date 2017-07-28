@@ -4,9 +4,13 @@ Created on Fri Jun  9 16:20:37 2017
 
 @author: leo
 """
-from Vehicle import Vehicle
-from SimulationVehicle import BikeTrailer, SimulationVehicle
-import Track
+
+import sys
+sys.path.append('../')
+
+from src.Vehicle import Vehicle
+from src.SimulationVehicle import BikeTrailer, SimulationVehicle
+from src import Track
 
 #from vpython import *
 import numpy as np
@@ -114,7 +118,7 @@ sdv.connectToSimulation(truck.tractor, laneTracker)
 sdv.compass.setUncertanty(2.0*pi/180.0)
 sdv.wheelAngle.setUncertanty(1.0*pi/180.0)
 sdv.speedometer.setUncertanty(5.0, True)
-sdv.gps.setUncertanty(5.0)
+sdv.gps.setUncertanty(2.0)
 sdv.laneTracker.setUncertanty(.1)
 
 # First scan to get an initial position
@@ -133,16 +137,15 @@ start = timeit.default_timer()
 # starts the system and acquire first positions
 for _ in range(int(1/dt)):
     sdv.scan()
-    sdv.updateFilter(dt)
+#    sdv.updateFilter(dt)
     truck.move(dt)
     time_text.set_text('Initializng systems' )
     truck.plot(False)
     sdv.plot(False)
 
 # Total time of the simulation
-totalTime = 1
+totalTime = 9
 t = 0
-RSE = 0
 linePath, = ax_path.plot(truck.tractor.x, truck.tractor.y,'y*')
 tunnelCounter = 0
 while t < totalTime:
@@ -157,7 +160,7 @@ while t < totalTime:
     else:
         sdv.scan()
 
-    sdv.updateFilter(dt)
+#    sdv.updateFilter(dt)
 
     omega = sdv.headingTracker(dt)
 #    phi = sdv.lqrTracker(dt)
@@ -173,11 +176,10 @@ while t < totalTime:
     sdv.engine.setValue(acc)
     sdv.steering.setValue(omega)
 
-    RSE += ((sdv.planner.nextX - truck.tractor.x)**2 + (sdv.planner.nextY - truck.tractor.y)**2)**0.5
     truck.move(dt)
     if( t - truck.timeOfLastPlot >= truck.plotRefreshRate):
-        truck.plot()
-        sdv.plot()
+        truck.plot(False)
+        sdv.plot(True)
         time_text.set_text('time = %.1f' % t )
         linePath.set_xdata(np.append(linePath.get_xdata(), truck.tractor.x))
         linePath.set_ydata(np.append(linePath.get_ydata(), truck.tractor.y))
@@ -188,8 +190,7 @@ while t < totalTime:
 stop = timeit.default_timer()
 
 print(stop - start)
-print('MRSE:')
-print(RSE/(totalTime/dt))
+
 #
 # Save the animation!
 ##

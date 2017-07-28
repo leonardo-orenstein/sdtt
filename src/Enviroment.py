@@ -13,6 +13,7 @@ from Body import Body
 from LIDAR import LIDAR
 from math import sin, cos, tan, pi, exp, sqrt
 import numpy as np
+import timeit
 
 class SimulationEnviroment(object):
     '''
@@ -36,6 +37,18 @@ class SimulationEnviroment(object):
     def addLIDAR(self, lidar):
         self.lidarArray.append(lidar)
 
+    def getPointMap(self):
+        pm = []
+        for lidar in self.lidarArray:
+            pm.extend(lidar.pointMap)
+
+        return pm
+
+    def lidarScan(self):
+        for lidar in self.lidarArray:
+            lidar.updateRays()
+            lidar.rayTracing(self.bodies)
+
     def addBody(self, body):
         if(body not in self.bodies):
             self.bodies.append(body)
@@ -52,6 +65,9 @@ class SimulationEnviroment(object):
 #        delta_theta = self.centerBody.getOrientation() - prevOrientation
         for lidar in self.lidarArray:
             lidar.setPose(pos, 0)
+
+        self.lidarScan()
+
 #        self.centerBody.update(t)
 
     def createPlot(self, fig = None, ax = None):
@@ -206,10 +222,10 @@ class Enviroment(SimulationEnviroment):
         else:
             self.ax = ax
 
-        for lidar in self.vehicle.lidarArray:
-            pm = [pm.coords if pm is not None else None for pm in lidar.pointMap]
-            bodyLine, = self.ax.plot(pm, 'r-', linewidth=0.1)
-            self.bodyLines.append(bodyLine)
+#        for lidar in self.vehicle.lidarArray:
+        pm = [pm.coords if pm is not None else None for pm in self.vehicle.lidar.read()]
+        bodyLine, = self.ax.plot(pm, 'r-', linewidth=0.1)
+        self.bodyLines.append(bodyLine)
 
         (verticesX, verticesY) = self.centerBody.getDrawingVertex()
         self.centerBodyLine, = self.ax.plot(verticesX, verticesY, 'r')
@@ -233,14 +249,16 @@ class Enviroment(SimulationEnviroment):
 
 
     def plot(self, draw = True):
-        for idx in range(len(self.vehicle.lidarArray)):
-            lidar = self.vehicle.lidarArray[idx]
-            pm_x = [(self.centerBody.x, pm.xy[0][0]) if pm is not None else None for pm in lidar.pointMap]
-            pm_y = [(self.centerBody.y, pm.xy[1][0]) if pm is not None else None for pm in lidar.pointMap]
+#        for idx in range(len(self.vehicle.lidarArray)):
 
-            bodyLine = self.bodyLines[idx]
-            bodyLine.set_ydata(pm_y)
-            bodyLine.set_xdata(pm_x)
+        idx = 0
+        lidar = self.vehicle.lidar
+        pm_x = [(self.centerBody.x, pm.xy[0][0]) if pm is not None else None for pm in lidar.read()]
+        pm_y = [(self.centerBody.y, pm.xy[1][0]) if pm is not None else None for pm in lidar.read()]
+
+        bodyLine = self.bodyLines[idx]
+        bodyLine.set_ydata(pm_y)
+        bodyLine.set_xdata(pm_x)
 
         (verticesX, verticesY) = self.centerBody.getDrawingVertex()
         self.centerBodyLine.set_ydata(verticesY)
